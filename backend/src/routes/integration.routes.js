@@ -828,6 +828,45 @@ router.post('/stackstorm/test', async (req, res) => {
 });
 
 // ============================================
+// SERVICENOW INTEGRATION
+// ============================================
+
+// Test ServiceNow connection
+router.post('/servicenow/test', async (req, res) => {
+  try {
+    const serviceNowService = require('../services/servicenow.service');
+    const result = await serviceNowService.testConnection();
+
+    if (result.success) {
+      const integration = await prisma.integration.findFirst({ where: { type: 'SERVICENOW' } });
+      if (integration) {
+        await prisma.integration.update({
+          where: { id: integration.id },
+          data: { status: 'ACTIVE', lastSyncAt: new Date() }
+        });
+      }
+    }
+
+    res.json(result);
+  } catch (error) {
+    logger.error('ServiceNow test route error:', error.message);
+    res.json({ success: false, error: 'Test failed' });
+  }
+});
+
+// Trigger ServiceNow sync
+router.post('/servicenow/sync', async (req, res) => {
+  try {
+    const serviceNowService = require('../services/servicenow.service');
+    const result = await serviceNowService.pullIncidents();
+    res.json(result);
+  } catch (error) {
+    logger.error('ServiceNow sync route error:', error.message);
+    res.status(500).json({ success: false, error: 'Sync failed' });
+  }
+});
+
+// ============================================
 // GENERIC INTEGRATION ROUTES
 // ============================================
 

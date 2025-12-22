@@ -31,6 +31,7 @@ const bulkRoutes = require('./routes/bulk.routes');
 const exportRoutes = require('./routes/export.routes');
 const attachmentRoutes = require('./routes/attachment.routes');
 const slackRoutes = require('./routes/slack.routes');
+const searchRoutes = require('./routes/search.routes');
 
 // Import middleware
 const { errorHandler, notFoundHandler } = require('./middleware/error.middleware');
@@ -155,6 +156,7 @@ app.use(`${API_PREFIX}/bulk`, bulkRoutes);
 app.use(`${API_PREFIX}/export`, exportRoutes);
 app.use(`${API_PREFIX}/attachments`, attachmentRoutes);
 app.use(`${API_PREFIX}/slack`, slackRoutes);
+app.use(`${API_PREFIX}/search`, searchRoutes);
 
 // Static files for attachments
 app.use('/uploads', express.static('uploads'));

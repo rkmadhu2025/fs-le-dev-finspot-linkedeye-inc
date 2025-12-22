@@ -595,54 +595,79 @@ const Notifications = {
 const GlobalSearch = {
     input: null,
     results: null,
+    modal: null,
     isOpen: false,
 
     init() {
-        this.input = document.getElementById('global-search');
-        this.results = document.getElementById('search-results');
+        // Main header search box
+        const headerSearch = document.getElementById('globalSearch');
+        // Modal search box
+        this.input = document.getElementById('quickSearchInput');
+        this.results = document.getElementById('searchResults');
+        this.modal = document.getElementById('searchModal');
+
+        if (headerSearch) {
+            headerSearch.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showModal();
+            });
+
+            headerSearch.addEventListener('focus', (e) => {
+                e.preventDefault();
+                headerSearch.blur();
+                this.showModal();
+            });
+        }
 
         if (this.input) {
             this.input.addEventListener('input', UI.debounce((e) => {
                 this.search(e.target.value);
             }, 300));
+        }
 
-            this.input.addEventListener('focus', () => {
-                if (this.input.value) {
-                    this.showResults();
-                }
-            });
+        // Keyboard shortcut (Cmd/Ctrl + K)
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                this.showModal();
+            }
 
-            // Keyboard shortcut (Cmd/Ctrl + K)
-            document.addEventListener('keydown', (e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                    e.preventDefault();
-                    this.input.focus();
+            if (e.key === 'Escape' && this.isOpen) {
+                this.hideModal();
+            }
+        });
+
+        // Close on outside click is handled by layout.html modal backdrop logic usually,
+        // but let's ensure it works for our search modal.
+        if (this.modal) {
+            this.modal.addEventListener('click', (e) => {
+                if (e.target === this.modal) {
+                    this.hideModal();
                 }
             });
         }
-
-        // Close on outside click
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.global-search')) {
-                this.hideResults();
-            }
-        });
     },
 
     async search(query) {
         if (!query || query.length < 2) {
-            this.hideResults();
+            if (this.results) this.results.innerHTML = '';
             return;
         }
 
         try {
+            if (this.results) {
+                this.results.innerHTML = '<div class="search-loading"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+            }
+
             const response = await API.get(`/search?q=${encodeURIComponent(query)}`);
             if (response.success) {
                 this.renderResults(response.data);
-                this.showResults();
             }
         } catch (error) {
             console.error('Search error:', error);
+            if (this.results) {
+                this.results.innerHTML = '<div class="search-error">Search failed. Please try again.</div>';
+            }
         }
     },
 
@@ -652,7 +677,7 @@ const GlobalSearch = {
         if (!results || results.length === 0) {
             this.results.innerHTML = `
                 <div class="search-empty">
-                    <p>No results found</p>
+                    <p>No results found for "${UI.escapeHtml(this.input.value)}"</p>
                 </div>
             `;
             return;
@@ -678,9 +703,9 @@ const GlobalSearch = {
 
     groupResults(results) {
         return results.reduce((groups, item) => {
-            const type = item.type || 'Other';
-            if (!groups[type]) groups[type] = [];
-            groups[type].push(item);
+            const typeDisplay = item.type.charAt(0).toUpperCase() + item.type.slice(1) + 's';
+            if (!groups[typeDisplay]) groups[typeDisplay] = [];
+            groups[typeDisplay].push(item);
             return groups;
         }, {});
     },
@@ -691,21 +716,25 @@ const GlobalSearch = {
             change: 'exchange-alt',
             problem: 'bug',
             asset: 'server',
+            alert: 'bell',
             user: 'user'
         };
         return icons[type] || 'file';
     },
 
-    showResults() {
-        if (this.results) {
-            this.results.classList.add('open');
+    showModal() {
+        if (this.modal) {
+            this.modal.style.display = 'flex';
             this.isOpen = true;
+            setTimeout(() => {
+                if (this.input) this.input.focus();
+            }, 100);
         }
     },
 
-    hideResults() {
-        if (this.results) {
-            this.results.classList.remove('open');
+    hideModal() {
+        if (this.modal) {
+            this.modal.style.display = 'none';
             this.isOpen = false;
         }
     }

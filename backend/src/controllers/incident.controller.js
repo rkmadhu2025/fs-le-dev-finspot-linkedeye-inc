@@ -132,7 +132,8 @@ exports.getIncidentStats = async (req, res) => {
       byState,
       recentlyClosed,
       slaBreached,
-      mttrData
+      mttrData,
+      today
     ] = await Promise.all([
       // Total open incidents
       prisma.incident.count({
@@ -179,6 +180,15 @@ exports.getIncidentStats = async (req, res) => {
           createdAt: true,
           resolvedAt: true
         }
+      }),
+
+      // Created today
+      prisma.incident.count({
+        where: {
+          createdAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
       })
     ]);
 
@@ -209,6 +219,7 @@ exports.getIncidentStats = async (req, res) => {
       success: true,
       data: {
         totalOpen,
+        today,
         byPriority: priorityCounts,
         byState: stateCounts,
         recentlyClosed,
@@ -413,6 +424,12 @@ exports.createIncident = async (req, res) => {
 
     logger.info(`Incident created: ${number}`);
 
+    // Unified Notifications (Slack, Email, etc.)
+    const notificationService = require('../services/notification.service');
+    notificationService.notifyIncidentCreated(incident.id).catch(err => {
+      logger.error('Failed to send unified notifications:', err.message);
+    });
+
     res.status(201).json({
       success: true,
       message: 'Incident created successfully',
@@ -492,6 +509,12 @@ exports.updateIncident = async (req, res) => {
       io.emit('incident:updated', incident);
     }
 
+    // Push to ServiceNow if integration is active
+    const serviceNowService = require('../services/servicenow.service');
+    serviceNowService.pushIncident(id).catch(err => {
+      logger.error('Failed to push updated incident to ServiceNow:', err.message);
+    });
+
     res.json({
       success: true,
       message: 'Incident updated successfully',
@@ -540,18 +563,11 @@ exports.assignIncident = async (req, res) => {
       }
     });
 
-    // Create notification for assigned user
-    if (assignedToId) {
-      await prisma.notification.create({
-        data: {
-          userId: assignedToId,
-          type: 'INCIDENT_ASSIGNED',
-          title: `Incident ${incident.number} assigned to you`,
-          message: incident.shortDescription,
-          link: `/incidents/${id}`
-        }
-      });
-    }
+    // Unified Notifications
+    const notificationService = require('../services/notification.service');
+    notificationService.notifyIncidentUpdated(id, 'ASSIGNED', req.user).catch(err => {
+      logger.error('Failed to send assignment notifications:', err.message);
+    });
 
     // Emit websocket event
     const io = req.app.get('io');
@@ -621,6 +637,12 @@ exports.resolveIncident = async (req, res) => {
     if (io) {
       io.emit('incident:resolved', incident);
     }
+
+    // Push to ServiceNow if integration is active
+    const serviceNowService = require('../services/servicenow.service');
+    serviceNowService.pushIncident(id).catch(err => {
+      logger.error('Failed to push resolved incident to ServiceNow:', err.message);
+    });
 
     res.json({
       success: true,

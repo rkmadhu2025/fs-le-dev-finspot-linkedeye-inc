@@ -135,10 +135,15 @@ router.post('/alertmanager', async (req, res) => {
             }
           });
 
-          // Link alert to incident
+          // Link alert to incident & Send Notifications
           await prisma.alert.update({
             where: { id: dbAlert.id },
             data: { incidentId: incident.id }
+          });
+
+          const notificationService = require('../services/notification.service');
+          await notificationService.notifyIncidentCreated(incident.id).catch(err => {
+            logger.error('Failed to send auto-incident notifications:', err.message);
           });
 
           // Create activity

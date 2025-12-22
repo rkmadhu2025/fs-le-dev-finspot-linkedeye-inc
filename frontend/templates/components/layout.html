@@ -109,9 +109,15 @@
                 <div class="nav-section-title">Management</div>
 
                 <a href="{{ url_for('users_list') }}"
-                    class="nav-item {% if 'user' in request.endpoint %}active{% endif %}">
+                    class="nav-item {% if request.endpoint == 'users_list' %}active{% endif %}">
+                    <i class="nav-icon fas fa-user-circle"></i>
+                    <span>Users</span>
+                </a>
+
+                <a href="{{ url_for('teams_list') }}"
+                    class="nav-item {% if request.endpoint == 'teams_list' %}active{% endif %}">
                     <i class="nav-icon fas fa-users"></i>
-                    <span>Users & Teams</span>
+                    <span>Teams</span>
                 </a>
 
                 <a href="{{ url_for('on_call') }}"

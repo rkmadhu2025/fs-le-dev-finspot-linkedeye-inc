@@ -52,6 +52,11 @@ const JOBS = {
     name: 'Dashboard Stats Cache',
     cronPattern: '*/10 * * * *', // Every 10 minutes
     description: 'Pre-calculate dashboard statistics'
+  },
+  SERVICENOW_SYNC: {
+    name: 'ServiceNow Sync',
+    cronPattern: '0 */1 * * *', // Every hour
+    description: 'Pull updates from ServiceNow'
   }
 };
 
@@ -82,6 +87,7 @@ class SchedulerService {
       await this.registerJob('EMAIL_CLEANUP', this.cleanupEmails.bind(this));
       await this.registerJob('RESET_TOKEN_CLEANUP', this.cleanupResetTokens.bind(this));
       await this.registerJob('DASHBOARD_STATS_CACHE', this.cacheDashboardStats.bind(this));
+      await this.registerJob('SERVICENOW_SYNC', this.syncServiceNow.bind(this));
 
       this.isRunning = true;
       logger.info('Scheduler service initialized with ' + this.jobs.size + ' jobs');
@@ -207,7 +213,7 @@ class SchedulerService {
    */
   calculateNextRun(cronPattern) {
     try {
-      const interval = cron.schedule(cronPattern, () => {}, { scheduled: false });
+      const interval = cron.schedule(cronPattern, () => { }, { scheduled: false });
       // This is a simplified calculation - in production use a proper cron parser
       return new Date(Date.now() + 5 * 60 * 1000); // Approximate
     } catch (error) {
@@ -443,6 +449,21 @@ class SchedulerService {
       alerts: { firing: totalAlerts },
       generatedAt: new Date()
     };
+  }
+
+  /**
+   * Sync incidents with ServiceNow
+   */
+  async syncServiceNow() {
+    try {
+      const serviceNowService = require('./servicenow.service');
+      const result = await serviceNowService.pullIncidents();
+      if (result.success) {
+        logger.info(`ServiceNow sync successful: ${result.count} incidents processed`);
+      }
+    } catch (error) {
+      logger.error('ServiceNow periodic sync failed:', error);
+    }
   }
 
   // ============================================

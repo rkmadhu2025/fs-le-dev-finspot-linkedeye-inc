@@ -1,0 +1,241 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Teams - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Team Management</h1>
+        <p class="page-subtitle">Manage assignment groups, on-call teams and escalation policies</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-primary" onclick="showCreateTeamModal()">
+            <i class="fas fa-plus"></i> Create Team
+        </button>
+    </div>
+</div>
+
+<div class="grid grid-3">
+    {% for team in teams %}
+    <div class="card team-card">
+        <div class="card-header">
+            <h3 class="card-title">{{ team.name }}</h3>
+            <div class="card-actions">
+                <button class="btn-icon" onclick="editTeam('{{ team.id }}')"><i class="fas fa-edit"></i></button>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">{{ team.description or 'No description' }}</p>
+
+            <div class="team-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Members</span>
+                    <span class="stat-value">{{ team.members|length }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Incidents</span>
+                    <span class="stat-value">{{ team._count.assignedIncidents }}</span>
+                </div>
+            </div>
+
+            <div class="team-members-avatars mt-4">
+                {% for member in team.members[:5] %}
+                <span class="avatar avatar-xs" title="{{ member.user.firstName }} {{ member.user.lastName }}">
+                    {{ member.user.firstName[0] }}{{ member.user.lastName[0] }}
+                </span>
+                {% endfor %}
+                {% if team.members|length > 5 %}
+                <span class="avatar avatar-xs avatar-more">+{{ team.members|length - 5 }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-footer">
+            <a href="/on-call?teamId={{ team.id }}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-calendar-alt"></i> On-Call
+            </a>
+            <button class="btn btn-sm btn-link" onclick="viewTeamMembers('{{ team.id }}')">
+                Manage Members
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state card col-span-3">
+        <div class="empty-state-icon"><i class="fas fa-users"></i></div>
+        <h3>No Teams Found</h3>
+        <p>Create your first team to start assigning incidents and setting up on-call schedules.</p>
+        <button class="btn btn-primary mt-4" onclick="showCreateTeamModal()">Create Team</button>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Create/Edit Team Modal -->
+<div class="modal" id="teamModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="teamModalTitle">Create New Team</h4>
+                <button class="modal-close" onclick="closeModal('teamModal')">&times;</button>
+            </div>
+            <form id="teamForm" onsubmit="submitTeam(event)">
+                <input type="hidden" id="teamId" name="id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Team Name *</label>
+                        <input type="text" name="name" id="teamName" class="form-control" required
+                            placeholder="e.g. Cloud Operations">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" id="teamDescription" class="form-control" rows="3"
+                            placeholder="Briefly describe the team's responsibilities"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Team Email</label>
+                        <input type="email" name="email" id="teamEmail" class="form-control"
+                            placeholder="team@company.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Slack Channel</label>
+                        <input type="text" name="slackChannel" id="teamSlackChannel" class="form-control"
+                            placeholder="#team-alerts">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('teamModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .team-card {
+        transition: transform 0.2s;
+    }
+
+    .team-card:hover {
+        transform: translateY(-4px);
+    }
+
+    .team-stats {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1rem 0;
+        border-top: 1px solid var(--gray-100);
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+    }
+
+    .stat-value {
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+
+    .team-members-avatars {
+        display: flex;
+        margin-left: 0.25rem;
+    }
+
+    .team-members-avatars .avatar {
+        margin-left: -0.5rem;
+        border: 2px solid var(--white);
+    }
+
+    .avatar-more {
+        background: var(--gray-100);
+        color: var(--gray-600);
+        font-weight: 600;
+        font-size: 0.7rem;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const API_URL = '{{ api_url }}';
+
+    function showCreateTeamModal() {
+        document.getElementById('teamForm').reset();
+        document.getElementById('teamId').value = '';
+        document.getElementById('teamModalTitle').innerHTML = '<i class="fas fa-plus"></i> Create New Team';
+        document.getElementById('teamModal').classList.add('show');
+    }
+
+    async function editTeam(id) {
+        try {
+            const response = await fetch(`${API_URL}/api/v1/teams/${id}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                const team = data.data;
+                document.getElementById('teamId').value = team.id;
+                document.getElementById('teamName').value = team.name;
+                document.getElementById('teamDescription').value = team.description || '';
+                document.getElementById('teamEmail').value = team.email || '';
+                document.getElementById('teamSlackChannel').value = team.slackChannel || '';
+
+                document.getElementById('teamModalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Team';
+                document.getElementById('teamModal').classList.add('show');
+            }
+        } catch (error) {
+            showToast('Failed to load team details', 'error');
+        }
+    }
+
+    async function submitTeam(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData);
+        const id = data.id;
+        delete data.id;
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${API_URL}/api/v1/teams/${id}` : `${API_URL}/api/v1/teams`;
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast(`Team ${id ? 'updated' : 'created'} successfully`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(result.error || 'Failed to save team', 'error');
+            }
+        } catch (error) {
+            showToast('System error occurred', 'error');
+        }
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('show');
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        toast.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 24px;border-radius:8px;z-index:9999;color:white;background:' +
+            (type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6');
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+</script>
+{% endblock %}

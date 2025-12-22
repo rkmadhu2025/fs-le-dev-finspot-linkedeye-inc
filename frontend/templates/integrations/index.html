@@ -59,7 +59,8 @@
         </div>
         <div class="integration-actions">
             {% if prom %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('PROMETHEUS', '{{ prom.id }}', '{{ prom.name }}', '{{ prom.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('PROMETHEUS', '{{ prom.id }}', '{{ prom.name }}', '{{ prom.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('prometheus')">Test</button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('PROMETHEUS')">Setup</button>
@@ -86,7 +87,8 @@
         </div>
         <div class="integration-actions">
             {% if graf %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('GRAFANA', '{{ graf.id }}', '{{ graf.name }}', '{{ graf.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('GRAFANA', '{{ graf.id }}', '{{ graf.name }}', '{{ graf.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('grafana')">Test</button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('GRAFANA')">Setup</button>
@@ -113,7 +115,8 @@
         </div>
         <div class="integration-actions">
             {% if slack %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('SLACK', '{{ slack.id }}', '{{ slack.name }}', '{{ slack.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('SLACK', '{{ slack.id }}', '{{ slack.name }}', '{{ slack.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('slack')">Test</button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('SLACK')">Setup</button>
@@ -140,7 +143,8 @@
         </div>
         <div class="integration-actions">
             {% if am %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('ALERTMANAGER', '{{ am.id }}', '{{ am.name }}', '{{ am.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('ALERTMANAGER', '{{ am.id }}', '{{ am.name }}', '{{ am.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('alertmanager')">Test</button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('ALERTMANAGER')">Setup</button>
@@ -167,7 +171,8 @@
         </div>
         <div class="integration-actions">
             {% if loki %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('LOKI', '{{ loki.id }}', '{{ loki.name }}', '{{ loki.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('LOKI', '{{ loki.id }}', '{{ loki.name }}', '{{ loki.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('loki')">Test</button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('LOKI')">Setup</button>
@@ -194,7 +199,8 @@
         </div>
         <div class="integration-actions">
             {% if st2 %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('STACKSTORM', '{{ st2.id }}', '{{ st2.name }}', '{{ st2.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('STACKSTORM', '{{ st2.id }}', '{{ st2.name }}', '{{ st2.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('stackstorm')">Test</button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('STACKSTORM')">Setup</button>
@@ -221,7 +227,8 @@
         </div>
         <div class="integration-actions">
             {% if pd %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('PAGERDUTY', '{{ pd.id }}', '{{ pd.name }}', '{{ pd.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('PAGERDUTY', '{{ pd.id }}', '{{ pd.name }}', '{{ pd.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('pagerduty')">Test</button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('PAGERDUTY')">Setup</button>
@@ -248,7 +255,8 @@
         </div>
         <div class="integration-actions">
             {% if jira %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('JIRA', '{{ jira.id }}', '{{ jira.name }}', '{{ jira.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('JIRA', '{{ jira.id }}', '{{ jira.name }}', '{{ jira.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('jira')">Test</button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('JIRA')">Setup</button>
@@ -275,8 +283,12 @@
         </div>
         <div class="integration-actions">
             {% if snow %}
-            <button class="btn btn-secondary btn-sm" onclick="configureIntegration('SERVICENOW', '{{ snow.id }}', '{{ snow.name }}', '{{ snow.config | default('{}') | e }}')">Configure</button>
+            <button class="btn btn-secondary btn-sm"
+                onclick="configureIntegration('SERVICENOW', '{{ snow.id }}', '{{ snow.name }}', '{{ snow.config | default('{}') | e }}')">Configure</button>
             <button class="btn btn-outline btn-sm" onclick="testIntegration('servicenow')">Test</button>
+            <button class="btn btn-outline btn-sm" onclick="syncIntegration('servicenow')">
+                <i class="fas fa-sync"></i> Sync
+            </button>
             {% else %}
             <button class="btn btn-primary btn-sm" onclick="configureIntegration('SERVICENOW')">Setup</button>
             {% endif %}
@@ -312,9 +324,15 @@
                         </td>
                         <td>{{ integration.lastSyncAt or '-' }}</td>
                         <td>
-                            <button class="btn-icon" title="Test" onclick="testIntegrationById('{{ integration.id }}')"><i class="fas fa-sync"></i></button>
-                            <button class="btn-icon" title="Edit" onclick="editIntegration('{{ integration.id }}', '{{ integration.name }}', '{{ integration.type }}', '{{ integration.config | default('{}') | e }}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn-icon text-danger" title="Delete" onclick="deleteIntegration('{{ integration.id }}')"><i class="fas fa-trash"></i></button>
+                            <button class="btn-icon" title="Test"
+                                onclick="testIntegrationById('{{ integration.id }}')"><i
+                                    class="fas fa-sync"></i></button>
+                            <button class="btn-icon" title="Edit"
+                                onclick="editIntegration('{{ integration.id }}', '{{ integration.name }}', '{{ integration.type }}', '{{ integration.config | default('{}') | e }}')"><i
+                                    class="fas fa-edit"></i></button>
+                            <button class="btn-icon text-danger" title="Delete"
+                                onclick="deleteIntegration('{{ integration.id }}')"><i
+                                    class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                     {% else %}
@@ -338,7 +356,8 @@
             <input type="hidden" id="integrationId" value="">
             <div class="form-group">
                 <label for="integrationName">Name *</label>
-                <input type="text" id="integrationName" class="form-control" placeholder="e.g., Production Prometheus" required>
+                <input type="text" id="integrationName" class="form-control" placeholder="e.g., Production Prometheus"
+                    required>
             </div>
             <div class="form-group">
                 <label for="integrationType">Type *</label>
@@ -358,11 +377,13 @@
             <div class="form-group">
                 <label for="integrationConfig">Configuration (JSON)</label>
                 <div class="config-input-group">
-                    <textarea id="integrationConfig" class="form-control" rows="6" placeholder='{"url": "http://...", "apiKey": "..."}'>{}</textarea>
+                    <textarea id="integrationConfig" class="form-control" rows="6"
+                        placeholder='{"url": "http://...", "apiKey": "..."}'>{}</textarea>
                     <div class="config-actions">
                         <label class="btn btn-outline btn-sm upload-btn">
                             <i class="fas fa-upload"></i> Upload JSON
-                            <input type="file" id="configFileUpload" accept=".json" style="display: none;" onchange="handleConfigUpload(event)">
+                            <input type="file" id="configFileUpload" accept=".json" style="display: none;"
+                                onchange="handleConfigUpload(event)">
                         </label>
                         <button type="button" class="btn btn-outline btn-sm" onclick="formatConfig()">
                             <i class="fas fa-indent"></i> Format
@@ -385,289 +406,373 @@
 
 {% block extra_css %}
 <style>
-.integration-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-.integration-card {
-    background: white;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-lg);
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.75rem;
-}
-.integration-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-}
-.integration-linkedeye { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark, #1e40af) 100%); }
-.integration-prometheus { background: #e6522c; }
-.integration-grafana { background: #f46800; }
-.integration-slack { background: #4a154b; }
-.integration-alertmanager { background: #f85149; }
-.integration-loki { background: linear-gradient(135deg, #f46800 0%, #ffc107 100%); }
-.integration-stackstorm { background: linear-gradient(135deg, #00c853 0%, #1de9b6 100%); }
-.integration-pagerduty { background: #06ac38; }
-.integration-jira { background: #0052cc; }
-.integration-servicenow { background: #81b5a1; }
-.integration-card.featured {
-    border: 2px solid var(--primary);
-    background: linear-gradient(135deg, rgba(var(--primary-rgb, 59, 130, 246), 0.05) 0%, white 100%);
-}
-.integration-card.featured .btn-primary {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-.integration-info h4 {
-    margin: 0;
-    font-size: 1rem;
-}
-.integration-info p {
-    margin: 0;
-    font-size: 0.8rem;
-    color: var(--gray-500);
-}
-.mt-4 { margin-top: 1.5rem; }
-.live-metrics {
-    background: var(--gray-50);
-    border-radius: var(--radius-md);
-    padding: 1rem;
-    margin-top: 1rem;
-}
-.live-metrics h4 {
-    margin: 0 0 0.75rem 0;
-    font-size: 0.9rem;
-    color: var(--gray-700);
-}
-.metric-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--gray-200);
-}
-.metric-row:last-child { border-bottom: none; }
-.metric-label { color: var(--gray-600); }
-.metric-value { font-weight: 600; }
-.metric-value.up { color: var(--success); }
-.metric-value.down { color: var(--danger); }
+    .integration-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
 
-/* Modal Styles */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-.modal-content {
-    background: white;
-    border-radius: var(--radius-lg);
-    width: 100%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--gray-200);
-}
-.modal-header h3 {
-    margin: 0;
-    font-size: 1.1rem;
-}
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--gray-500);
-    line-height: 1;
-}
-.modal-close:hover {
-    color: var(--gray-700);
-}
-#integrationForm {
-    padding: 1.5rem;
-}
-#integrationForm .form-group {
-    margin-bottom: 1rem;
-}
-#integrationForm label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: var(--gray-700);
-}
-#integrationForm .form-control {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--gray-300);
-    border-radius: var(--radius-md);
-    font-size: 0.9rem;
-}
-#integrationForm textarea.form-control {
-    font-family: monospace;
-    font-size: 0.85rem;
-}
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--gray-200);
-    margin-top: 1rem;
-}
-.text-success { color: var(--success); }
-.text-danger { color: var(--danger); }
+    .integration-card {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.75rem;
+    }
 
-/* Integration card actions */
-.integration-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-.btn-outline {
-    background: transparent;
-    border: 1px solid var(--gray-300);
-    color: var(--gray-700);
-    padding: 0.35rem 0.75rem;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    font-size: 0.8rem;
-}
-.btn-outline:hover {
-    background: var(--gray-100);
-    border-color: var(--gray-400);
-}
+    .integration-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
 
-/* Config input group */
-.config-input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-.config-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-.upload-btn {
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-.config-help {
-    font-size: 0.8rem;
-    color: var(--gray-600);
-    margin-top: 0.25rem;
-    padding: 0.5rem;
-    background: var(--gray-50);
-    border-radius: var(--radius-sm);
-    display: none;
-}
-.config-help.show {
-    display: block;
-}
-.config-help.error {
-    background: #fee2e2;
-    color: #dc2626;
-}
-.config-help.success {
-    background: #d1fae5;
-    color: #059669;
-}
-.config-help.info {
-    background: #dbeafe;
-    color: #2563eb;
-}
-.config-help pre {
-    margin: 0.5rem 0 0;
-    padding: 0.5rem;
-    background: white;
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-    overflow-x: auto;
-}
+    .integration-linkedeye {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark, #1e40af) 100%);
+    }
+
+    .integration-prometheus {
+        background: #e6522c;
+    }
+
+    .integration-grafana {
+        background: #f46800;
+    }
+
+    .integration-slack {
+        background: #4a154b;
+    }
+
+    .integration-alertmanager {
+        background: #f85149;
+    }
+
+    .integration-loki {
+        background: linear-gradient(135deg, #f46800 0%, #ffc107 100%);
+    }
+
+    .integration-stackstorm {
+        background: linear-gradient(135deg, #00c853 0%, #1de9b6 100%);
+    }
+
+    .integration-pagerduty {
+        background: #06ac38;
+    }
+
+    .integration-jira {
+        background: #0052cc;
+    }
+
+    .integration-servicenow {
+        background: #81b5a1;
+    }
+
+    .integration-card.featured {
+        border: 2px solid var(--primary);
+        background: linear-gradient(135deg, rgba(var(--primary-rgb, 59, 130, 246), 0.05) 0%, white 100%);
+    }
+
+    .integration-card.featured .btn-primary {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .integration-info h4 {
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .integration-info p {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--gray-500);
+    }
+
+    .mt-4 {
+        margin-top: 1.5rem;
+    }
+
+    .live-metrics {
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .live-metrics h4 {
+        margin: 0 0 0.75rem 0;
+        font-size: 0.9rem;
+        color: var(--gray-700);
+    }
+
+    .metric-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .metric-row:last-child {
+        border-bottom: none;
+    }
+
+    .metric-label {
+        color: var(--gray-600);
+    }
+
+    .metric-value {
+        font-weight: 600;
+    }
+
+    .metric-value.up {
+        color: var(--success);
+    }
+
+    .metric-value.down {
+        color: var(--danger);
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: var(--radius-lg);
+        width: 100%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--gray-500);
+        line-height: 1;
+    }
+
+    .modal-close:hover {
+        color: var(--gray-700);
+    }
+
+    #integrationForm {
+        padding: 1.5rem;
+    }
+
+    #integrationForm .form-group {
+        margin-bottom: 1rem;
+    }
+
+    #integrationForm label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    #integrationForm .form-control {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius-md);
+        font-size: 0.9rem;
+    }
+
+    #integrationForm textarea.form-control {
+        font-family: monospace;
+        font-size: 0.85rem;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--gray-200);
+        margin-top: 1rem;
+    }
+
+    .text-success {
+        color: var(--success);
+    }
+
+    .text-danger {
+        color: var(--danger);
+    }
+
+    /* Integration card actions */
+    .integration-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .btn-outline {
+        background: transparent;
+        border: 1px solid var(--gray-300);
+        color: var(--gray-700);
+        padding: 0.35rem 0.75rem;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+
+    .btn-outline:hover {
+        background: var(--gray-100);
+        border-color: var(--gray-400);
+    }
+
+    /* Config input group */
+    .config-input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .config-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .upload-btn {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .config-help {
+        font-size: 0.8rem;
+        color: var(--gray-600);
+        margin-top: 0.25rem;
+        padding: 0.5rem;
+        background: var(--gray-50);
+        border-radius: var(--radius-sm);
+        display: none;
+    }
+
+    .config-help.show {
+        display: block;
+    }
+
+    .config-help.error {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .config-help.success {
+        background: #d1fae5;
+        color: #059669;
+    }
+
+    .config-help.info {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .config-help pre {
+        margin: 0.5rem 0 0;
+        padding: 0.5rem;
+        background: white;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        overflow-x: auto;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    loadLiveMetrics();
-    // Refresh every 30 seconds
-    setInterval(loadLiveMetrics, 30000);
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        loadLiveMetrics();
+        // Refresh every 30 seconds
+        setInterval(loadLiveMetrics, 30000);
+    });
 
-async function loadLiveMetrics() {
-    try {
-        // Load Prometheus metrics
-        const prometheusCard = document.querySelector('.integration-prometheus').closest('.integration-card');
-        const promMetrics = await fetchPrometheusMetrics();
-        updateMetricsDisplay(prometheusCard, promMetrics, 'prometheus');
+    async function loadLiveMetrics() {
+        try {
+            // Load Prometheus metrics
+            const prometheusCard = document.querySelector('.integration-prometheus').closest('.integration-card');
+            const promMetrics = await fetchPrometheusMetrics();
+            updateMetricsDisplay(prometheusCard, promMetrics, 'prometheus');
 
-        // Load Alertmanager alerts
-        const alertsData = await fetchAlertmanagerAlerts();
-        updateAlertsCount(alertsData);
+            // Load Alertmanager alerts
+            const alertsData = await fetchAlertmanagerAlerts();
+            updateAlertsCount(alertsData);
 
-    } catch (error) {
-        console.error('Error loading live metrics:', error);
-    }
-}
-
-async function fetchPrometheusMetrics() {
-    const response = await fetch('/api/proxy/integrations/prometheus/targets');
-    if (response.ok) {
-        const data = await response.json();
-        return data.data || {};
-    }
-    return {};
-}
-
-async function fetchAlertmanagerAlerts() {
-    const response = await fetch('/api/proxy/integrations/alertmanager/alerts');
-    if (response.ok) {
-        const data = await response.json();
-        return data.data || [];
-    }
-    return [];
-}
-
-function updateMetricsDisplay(card, metrics, type) {
-    let metricsDiv = card.querySelector('.live-metrics');
-    if (!metricsDiv) {
-        metricsDiv = document.createElement('div');
-        metricsDiv.className = 'live-metrics';
-        card.appendChild(metricsDiv);
+        } catch (error) {
+            console.error('Error loading live metrics:', error);
+        }
     }
 
-    if (type === 'prometheus' && metrics.activeTargets) {
-        const upCount = metrics.activeTargets.filter(t => t.health === 'up').length;
-        const downCount = metrics.activeTargets.filter(t => t.health === 'down').length;
-        metricsDiv.innerHTML = `
+    async function fetchPrometheusMetrics() {
+        const response = await fetch('/api/proxy/integrations/prometheus/targets');
+        if (response.ok) {
+            const data = await response.json();
+            return data.data || {};
+        }
+        return {};
+    }
+
+    async function fetchAlertmanagerAlerts() {
+        const response = await fetch('/api/proxy/integrations/alertmanager/alerts');
+        if (response.ok) {
+            const data = await response.json();
+            return data.data || [];
+        }
+        return [];
+    }
+
+    function updateMetricsDisplay(card, metrics, type) {
+        let metricsDiv = card.querySelector('.live-metrics');
+        if (!metricsDiv) {
+            metricsDiv = document.createElement('div');
+            metricsDiv.className = 'live-metrics';
+            card.appendChild(metricsDiv);
+        }
+
+        if (type === 'prometheus' && metrics.activeTargets) {
+            const upCount = metrics.activeTargets.filter(t => t.health === 'up').length;
+            const downCount = metrics.activeTargets.filter(t => t.health === 'down').length;
+            metricsDiv.innerHTML = `
             <h4><i class="fas fa-chart-bar"></i> Live Status</h4>
             <div class="metric-row">
                 <span class="metric-label">Targets Up</span>
@@ -682,122 +787,177 @@ function updateMetricsDisplay(card, metrics, type) {
                 <span class="metric-value">${metrics.activeTargets.length}</span>
             </div>
         `;
-    }
-}
-
-function updateAlertsCount(alerts) {
-    const alertmanagerStatus = document.getElementById('alertmanager-status');
-    if (alertmanagerStatus) {
-        const firingCount = alerts.filter(a => a.status?.state === 'active').length;
-        if (firingCount > 0) {
-            alertmanagerStatus.innerHTML = `<span class="badge badge-danger">${firingCount} Active</span>`;
-        } else {
-            alertmanagerStatus.innerHTML = '<span class="badge badge-success">Connected</span>';
         }
     }
-}
 
-async function testIntegration(type) {
-    const btn = event.target;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+    function updateAlertsCount(alerts) {
+        const alertmanagerStatus = document.getElementById('alertmanager-status');
+        if (alertmanagerStatus) {
+            const firingCount = alerts.filter(a => a.status?.state === 'active').length;
+            if (firingCount > 0) {
+                alertmanagerStatus.innerHTML = `<span class="badge badge-danger">${firingCount} Active</span>`;
+            } else {
+                alertmanagerStatus.innerHTML = '<span class="badge badge-success">Connected</span>';
+            }
+        }
+    }
 
-    try {
-        const response = await fetch(`/api/proxy/integrations/${type}/test`, {
-            method: 'POST'
-        });
-        const data = await response.json();
+    async function testIntegration(type) {
+        const btn = event.target;
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
 
-        if (data.success) {
-            btn.innerHTML = '<i class="fas fa-check"></i> Connected';
-            btn.classList.add('btn-success');
-        } else {
-            btn.innerHTML = '<i class="fas fa-times"></i> Failed';
+        try {
+            const response = await fetch(`/api/proxy/integrations/${type}/test`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                btn.innerHTML = '<i class="fas fa-check"></i> Connected';
+                btn.classList.add('btn-success');
+            } else {
+                btn.innerHTML = '<i class="fas fa-times"></i> Failed';
+                btn.classList.add('btn-danger');
+            }
+        } catch (error) {
+            btn.innerHTML = '<i class="fas fa-times"></i> Error';
             btn.classList.add('btn-danger');
         }
-    } catch (error) {
-        btn.innerHTML = '<i class="fas fa-times"></i> Error';
-        btn.classList.add('btn-danger');
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('btn-success', 'btn-danger');
+        }, 3000);
     }
 
-    setTimeout(() => {
-        btn.disabled = false;
-        btn.innerHTML = 'Test Connection';
-        btn.classList.remove('btn-success', 'btn-danger');
-    }, 3000);
-}
+    async function syncIntegration(type) {
+        const btn = event.target;
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
 
-// Configuration templates for each integration type
-const configTemplates = {
-    PROMETHEUS: {
-        url: "http://prometheus:9090",
-        basicAuth: {
-            username: "",
-            password: ""
+        try {
+            const response = await fetch(`/api/proxy/integrations/${type}/sync`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                btn.innerHTML = '<i class="fas fa-check"></i> Done';
+                btn.classList.add('btn-success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                alert('Sync failed: ' + (data.error || 'Unknown error'));
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            alert('Error triggering sync: ' + error.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
         }
-    },
-    GRAFANA: {
-        url: "http://grafana:3000",
-        apiKey: "",
-        orgId: 1
-    },
-    ALERTMANAGER: {
-        url: "http://alertmanager:9093",
-        basicAuth: {
-            username: "",
-            password: ""
-        }
-    },
-    LOKI: {
-        url: "http://loki:3100",
-        apiKey: "",
-        tenantId: ""
-    },
-    STACKSTORM: {
-        url: "https://stackstorm:443",
-        apiKey: "",
-        authToken: ""
-    },
-    SLACK: {
-        webhookUrl: "https://hooks.slack.com/services/...",
-        channel: "#alerts",
-        username: "LinkedEye Bot"
-    },
-    PAGERDUTY: {
-        routingKey: "",
-        serviceKey: "",
-        apiKey: ""
-    },
-    JIRA: {
-        url: "https://yourcompany.atlassian.net",
-        email: "",
-        apiToken: "",
-        projectKey: ""
-    },
-    SERVICENOW: {
-        url: "https://yourinstance.service-now.com",
-        username: "",
-        password: "",
-        clientId: "",
-        clientSecret: ""
     }
-};
 
-function showAddIntegration() {
-    document.getElementById('integrationModalTitle').textContent = 'Add Integration';
-    document.getElementById('integrationForm').reset();
-    document.getElementById('integrationId').value = '';
-    document.getElementById('integrationConfig').value = '{}';
-    hideConfigHelp();
-    document.getElementById('integrationModal').style.display = 'flex';
-}
+    // Configuration templates for each integration type
+    const configTemplates = {
+        PROMETHEUS: {
+            url: "http://prometheus:9090",
+            basicAuth: {
+                username: "",
+                password: ""
+            }
+        },
+        GRAFANA: {
+            url: "http://grafana:3000",
+            apiKey: "",
+            orgId: 1
+        },
+        ALERTMANAGER: {
+            url: "http://alertmanager:9093",
+            basicAuth: {
+                username: "",
+                password: ""
+            }
+        },
+        LOKI: {
+            url: "http://loki:3100",
+            apiKey: "",
+            tenantId: ""
+        },
+        STACKSTORM: {
+            url: "https://stackstorm:443",
+            apiKey: "",
+            authToken: ""
+        },
+        SLACK: {
+            webhookUrl: "https://hooks.slack.com/services/...",
+            channel: "#alerts",
+            username: "LinkedEye Bot"
+        },
+        PAGERDUTY: {
+            routingKey: "",
+            serviceKey: "",
+            apiKey: ""
+        },
+        JIRA: {
+            url: "https://yourcompany.atlassian.net",
+            email: "",
+            apiToken: "",
+            projectKey: ""
+        },
+        SERVICENOW: {
+            url: "https://yourinstance.service-now.com",
+            username: "",
+            password: "",
+            clientId: "",
+            clientSecret: ""
+        }
+    };
 
-function configureIntegration(type, id, name, config) {
-    if (id) {
-        // Editing existing integration
-        document.getElementById('integrationModalTitle').textContent = 'Configure ' + type;
+    function showAddIntegration() {
+        document.getElementById('integrationModalTitle').textContent = 'Add Integration';
+        document.getElementById('integrationForm').reset();
+        document.getElementById('integrationId').value = '';
+        document.getElementById('integrationConfig').value = '{}';
+        hideConfigHelp();
+        document.getElementById('integrationModal').style.display = 'flex';
+    }
+
+    function configureIntegration(type, id, name, config) {
+        if (id) {
+            // Editing existing integration
+            document.getElementById('integrationModalTitle').textContent = 'Configure ' + type;
+            document.getElementById('integrationId').value = id;
+            document.getElementById('integrationName').value = name || type;
+            document.getElementById('integrationType').value = type;
+            try {
+                const configObj = typeof config === 'string' ? JSON.parse(config) : config;
+                document.getElementById('integrationConfig').value = JSON.stringify(configObj, null, 2);
+            } catch (e) {
+                document.getElementById('integrationConfig').value = config || '{}';
+            }
+        } else {
+            // Setting up new integration
+            document.getElementById('integrationModalTitle').textContent = 'Setup ' + type;
+            document.getElementById('integrationForm').reset();
+            document.getElementById('integrationId').value = '';
+            document.getElementById('integrationName').value = type + ' Integration';
+            document.getElementById('integrationType').value = type;
+            // Load template config
+            const template = configTemplates[type] || {};
+            document.getElementById('integrationConfig').value = JSON.stringify(template, null, 2);
+        }
+        updateConfigTemplate();
+        document.getElementById('integrationModal').style.display = 'flex';
+    }
+
+    function editIntegration(id, name, type, config) {
+        document.getElementById('integrationModalTitle').textContent = 'Edit Integration';
         document.getElementById('integrationId').value = id;
-        document.getElementById('integrationName').value = name || type;
+        document.getElementById('integrationName').value = name;
         document.getElementById('integrationType').value = type;
         try {
             const configObj = typeof config === 'string' ? JSON.parse(config) : config;
@@ -805,254 +965,228 @@ function configureIntegration(type, id, name, config) {
         } catch (e) {
             document.getElementById('integrationConfig').value = config || '{}';
         }
-    } else {
-        // Setting up new integration
-        document.getElementById('integrationModalTitle').textContent = 'Setup ' + type;
-        document.getElementById('integrationForm').reset();
-        document.getElementById('integrationId').value = '';
-        document.getElementById('integrationName').value = type + ' Integration';
-        document.getElementById('integrationType').value = type;
-        // Load template config
-        const template = configTemplates[type] || {};
-        document.getElementById('integrationConfig').value = JSON.stringify(template, null, 2);
+        updateConfigTemplate();
+        document.getElementById('integrationModal').style.display = 'flex';
     }
-    updateConfigTemplate();
-    document.getElementById('integrationModal').style.display = 'flex';
-}
 
-function editIntegration(id, name, type, config) {
-    document.getElementById('integrationModalTitle').textContent = 'Edit Integration';
-    document.getElementById('integrationId').value = id;
-    document.getElementById('integrationName').value = name;
-    document.getElementById('integrationType').value = type;
-    try {
-        const configObj = typeof config === 'string' ? JSON.parse(config) : config;
-        document.getElementById('integrationConfig').value = JSON.stringify(configObj, null, 2);
-    } catch (e) {
-        document.getElementById('integrationConfig').value = config || '{}';
+    function closeIntegrationModal() {
+        document.getElementById('integrationModal').style.display = 'none';
+        hideConfigHelp();
     }
-    updateConfigTemplate();
-    document.getElementById('integrationModal').style.display = 'flex';
-}
 
-function closeIntegrationModal() {
-    document.getElementById('integrationModal').style.display = 'none';
-    hideConfigHelp();
-}
+    function updateConfigTemplate() {
+        const type = document.getElementById('integrationType').value;
+        const configTextarea = document.getElementById('integrationConfig');
+        const helpDiv = document.getElementById('configHelp');
 
-function updateConfigTemplate() {
-    const type = document.getElementById('integrationType').value;
-    const configTextarea = document.getElementById('integrationConfig');
-    const helpDiv = document.getElementById('configHelp');
+        if (type && configTemplates[type]) {
+            // Only update if the current config is empty or just {}
+            const currentConfig = configTextarea.value.trim();
+            if (currentConfig === '' || currentConfig === '{}') {
+                configTextarea.value = JSON.stringify(configTemplates[type], null, 2);
+            }
 
-    if (type && configTemplates[type]) {
-        // Only update if the current config is empty or just {}
-        const currentConfig = configTextarea.value.trim();
-        if (currentConfig === '' || currentConfig === '{}') {
-            configTextarea.value = JSON.stringify(configTemplates[type], null, 2);
+            // Show help text
+            showConfigHelp('info', getConfigHelpText(type));
         }
-
-        // Show help text
-        showConfigHelp('info', getConfigHelpText(type));
     }
-}
 
-function getConfigHelpText(type) {
-    const helpTexts = {
-        PROMETHEUS: 'Required: url. Optional: basicAuth (username, password)',
-        GRAFANA: 'Required: url, apiKey. Optional: orgId',
-        ALERTMANAGER: 'Required: url. Optional: basicAuth',
-        LOKI: 'Required: url. Optional: apiKey, tenantId',
-        STACKSTORM: 'Required: url, apiKey. Optional: authToken',
-        SLACK: 'Required: webhookUrl. Optional: channel, username',
-        PAGERDUTY: 'Required: routingKey or serviceKey',
-        JIRA: 'Required: url, email, apiToken, projectKey',
-        SERVICENOW: 'Required: url, username, password. Optional: clientId, clientSecret'
-    };
-    return helpTexts[type] || '';
-}
-
-function handleConfigUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const json = JSON.parse(e.target.result);
-            document.getElementById('integrationConfig').value = JSON.stringify(json, null, 2);
-            showConfigHelp('success', 'Configuration file loaded successfully');
-        } catch (err) {
-            showConfigHelp('error', 'Invalid JSON file: ' + err.message);
-        }
-    };
-    reader.readAsText(file);
-
-    // Reset file input
-    event.target.value = '';
-}
-
-function formatConfig() {
-    const textarea = document.getElementById('integrationConfig');
-    try {
-        const json = JSON.parse(textarea.value);
-        textarea.value = JSON.stringify(json, null, 2);
-        showConfigHelp('success', 'Configuration formatted successfully');
-    } catch (err) {
-        showConfigHelp('error', 'Invalid JSON: ' + err.message);
-    }
-}
-
-function validateConfig() {
-    const textarea = document.getElementById('integrationConfig');
-    const type = document.getElementById('integrationType').value;
-
-    try {
-        const json = JSON.parse(textarea.value);
-
-        // Basic validation based on type
-        const requiredFields = {
-            PROMETHEUS: ['url'],
-            GRAFANA: ['url'],
-            ALERTMANAGER: ['url'],
-            LOKI: ['url'],
-            STACKSTORM: ['url', 'apiKey'],
-            SLACK: ['webhookUrl'],
-            PAGERDUTY: ['routingKey'],
-            JIRA: ['url', 'email', 'apiToken'],
-            SERVICENOW: ['url', 'username', 'password']
+    function getConfigHelpText(type) {
+        const helpTexts = {
+            PROMETHEUS: 'Required: url. Optional: basicAuth (username, password)',
+            GRAFANA: 'Required: url, apiKey. Optional: orgId',
+            ALERTMANAGER: 'Required: url. Optional: basicAuth',
+            LOKI: 'Required: url. Optional: apiKey, tenantId',
+            STACKSTORM: 'Required: url, apiKey. Optional: authToken',
+            SLACK: 'Required: webhookUrl. Optional: channel, username',
+            PAGERDUTY: 'Required: routingKey or serviceKey',
+            JIRA: 'Required: url, email, apiToken, projectKey',
+            SERVICENOW: 'Required: url, username, password. Optional: clientId, clientSecret'
         };
+        return helpTexts[type] || '';
+    }
 
-        const required = requiredFields[type] || [];
-        const missing = required.filter(field => !json[field]);
+    function handleConfigUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
 
-        if (missing.length > 0) {
-            showConfigHelp('error', 'Missing required fields: ' + missing.join(', '));
-        } else {
-            showConfigHelp('success', 'Configuration is valid!');
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const json = JSON.parse(e.target.result);
+                document.getElementById('integrationConfig').value = JSON.stringify(json, null, 2);
+                showConfigHelp('success', 'Configuration file loaded successfully');
+            } catch (err) {
+                showConfigHelp('error', 'Invalid JSON file: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+
+        // Reset file input
+        event.target.value = '';
+    }
+
+    function formatConfig() {
+        const textarea = document.getElementById('integrationConfig');
+        try {
+            const json = JSON.parse(textarea.value);
+            textarea.value = JSON.stringify(json, null, 2);
+            showConfigHelp('success', 'Configuration formatted successfully');
+        } catch (err) {
+            showConfigHelp('error', 'Invalid JSON: ' + err.message);
         }
-    } catch (err) {
-        showConfigHelp('error', 'Invalid JSON: ' + err.message);
-    }
-}
-
-function showConfigHelp(type, message) {
-    const helpDiv = document.getElementById('configHelp');
-    helpDiv.className = 'config-help show ' + type;
-    helpDiv.textContent = message;
-}
-
-function hideConfigHelp() {
-    const helpDiv = document.getElementById('configHelp');
-    helpDiv.className = 'config-help';
-    helpDiv.textContent = '';
-}
-
-async function saveIntegration() {
-    const id = document.getElementById('integrationId').value;
-    const name = document.getElementById('integrationName').value;
-    const type = document.getElementById('integrationType').value;
-    const configText = document.getElementById('integrationConfig').value;
-
-    if (!name || !type) {
-        alert('Please fill in all required fields');
-        return;
     }
 
-    let config;
-    try {
-        config = JSON.parse(configText || '{}');
-    } catch (e) {
-        alert('Invalid JSON in configuration field');
-        return;
-    }
+    function validateConfig() {
+        const textarea = document.getElementById('integrationConfig');
+        const type = document.getElementById('integrationType').value;
 
-    const saveBtn = document.querySelector('#integrationForm button[type="submit"]');
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        try {
+            const json = JSON.parse(textarea.value);
 
-    try {
-        const url = id ? `/api/proxy/integrations/${id}` : '/api/proxy/integrations';
-        const method = id ? 'PUT' : 'POST';
+            // Basic validation based on type
+            const requiredFields = {
+                PROMETHEUS: ['url'],
+                GRAFANA: ['url'],
+                ALERTMANAGER: ['url'],
+                LOKI: ['url'],
+                STACKSTORM: ['url', 'apiKey'],
+                SLACK: ['webhookUrl'],
+                PAGERDUTY: ['routingKey'],
+                JIRA: ['url', 'email', 'apiToken'],
+                SERVICENOW: ['url', 'username', 'password']
+            };
 
-        const response = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, type, config })
-        });
+            const required = requiredFields[type] || [];
+            const missing = required.filter(field => !json[field]);
 
-        const data = await response.json();
-
-        if (data.success) {
-            closeIntegrationModal();
-            window.location.reload();
-        } else {
-            alert('Failed to save integration: ' + (data.error || 'Unknown error'));
+            if (missing.length > 0) {
+                showConfigHelp('error', 'Missing required fields: ' + missing.join(', '));
+            } else {
+                showConfigHelp('success', 'Configuration is valid!');
+            }
+        } catch (err) {
+            showConfigHelp('error', 'Invalid JSON: ' + err.message);
         }
-    } catch (error) {
-        alert('Error saving integration: ' + error.message);
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = 'Save Integration';
     }
-}
 
-async function testIntegrationById(id) {
-    const btn = event.target.closest('button');
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    function showConfigHelp(type, message) {
+        const helpDiv = document.getElementById('configHelp');
+        helpDiv.className = 'config-help show ' + type;
+        helpDiv.textContent = message;
+    }
 
-    try {
-        const response = await fetch(`/api/proxy/integrations/${id}/test`, {
-            method: 'POST'
-        });
-        const data = await response.json();
+    function hideConfigHelp() {
+        const helpDiv = document.getElementById('configHelp');
+        helpDiv.className = 'config-help';
+        helpDiv.textContent = '';
+    }
 
-        if (data.success) {
-            btn.innerHTML = '<i class="fas fa-check text-success"></i>';
-        } else {
+    async function saveIntegration() {
+        const id = document.getElementById('integrationId').value;
+        const name = document.getElementById('integrationName').value;
+        const type = document.getElementById('integrationType').value;
+        const configText = document.getElementById('integrationConfig').value;
+
+        if (!name || !type) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        let config;
+        try {
+            config = JSON.parse(configText || '{}');
+        } catch (e) {
+            alert('Invalid JSON in configuration field');
+            return;
+        }
+
+        const saveBtn = document.querySelector('#integrationForm button[type="submit"]');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        try {
+            const url = id ? `/api/proxy/integrations/${id}` : '/api/proxy/integrations';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, type, config })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                closeIntegrationModal();
+                window.location.reload();
+            } else {
+                alert('Failed to save integration: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error saving integration: ' + error.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = 'Save Integration';
+        }
+    }
+
+    async function testIntegrationById(id) {
+        const btn = event.target.closest('button');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        try {
+            const response = await fetch(`/api/proxy/integrations/${id}/test`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-times text-danger"></i>';
+                alert('Connection test failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
             btn.innerHTML = '<i class="fas fa-times text-danger"></i>';
-            alert('Connection test failed: ' + (data.error || 'Unknown error'));
+            alert('Error testing integration: ' + error.message);
         }
-    } catch (error) {
-        btn.innerHTML = '<i class="fas fa-times text-danger"></i>';
-        alert('Error testing integration: ' + error.message);
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }, 2000);
     }
 
-    setTimeout(() => {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-    }, 2000);
-}
-
-async function deleteIntegration(id) {
-    if (!confirm('Are you sure you want to delete this integration?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/proxy/integrations/${id}`, {
-            method: 'DELETE'
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            window.location.reload();
-        } else {
-            alert('Failed to delete integration: ' + (data.error || 'Unknown error'));
+    async function deleteIntegration(id) {
+        if (!confirm('Are you sure you want to delete this integration?')) {
+            return;
         }
-    } catch (error) {
-        alert('Error deleting integration: ' + error.message);
-    }
-}
 
-// Close modal when clicking outside
-document.addEventListener('click', function(e) {
-    const modal = document.getElementById('integrationModal');
-    if (e.target === modal) {
-        closeIntegrationModal();
+        try {
+            const response = await fetch(`/api/proxy/integrations/${id}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Failed to delete integration: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error deleting integration: ' + error.message);
+        }
     }
-});
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function (e) {
+        const modal = document.getElementById('integrationModal');
+        if (e.target === modal) {
+            closeIntegrationModal();
+        }
+    });
 </script>
 {% endblock %}
