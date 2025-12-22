@@ -272,13 +272,16 @@ exports.getIncidentById = async (req, res) => {
     });
 
     if (!incident) {
-      return res.status(404).json({ success: false, error: 'Incident not found' });
+      logger.warn(`Incident not found: ${id}`);
+      return res.status(404).json({ success: false, error: `Incident with ID ${id} not found` });
     }
 
+    logger.info(`Incident retrieved: ${incident.number} (${id})`);
     res.json({ success: true, data: incident });
   } catch (error) {
     logger.error('Get incident error:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch incident' });
+    logger.error('Get incident error stack:', error.stack);
+    res.status(500).json({ success: false, error: `Failed to fetch incident: ${error.message}` });
   }
 };
 

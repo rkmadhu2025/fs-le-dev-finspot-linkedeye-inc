@@ -18,7 +18,23 @@ router.use(authenticate);
 // Prometheus proxy - get targets
 router.get('/prometheus/targets', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'PROMETHEUS' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'PROMETHEUS' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.prometheusUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'PROMETHEUS',
+            config: JSON.stringify({ url: leConfig.prometheusUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: { activeTargets: [] } });
 
     const config = JSON.parse(integration.config || '{}');
@@ -34,7 +50,23 @@ router.get('/prometheus/targets', async (req, res) => {
 // Prometheus proxy - query
 router.get('/prometheus/query', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'PROMETHEUS' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'PROMETHEUS' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.prometheusUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'PROMETHEUS',
+            config: JSON.stringify({ url: leConfig.prometheusUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: {} });
 
     const config = JSON.parse(integration.config || '{}');
@@ -53,7 +85,23 @@ router.get('/prometheus/query', async (req, res) => {
 // Test Prometheus connection
 router.post('/prometheus/test', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'PROMETHEUS' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'PROMETHEUS' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.prometheusUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'PROMETHEUS',
+            config: JSON.stringify({ url: leConfig.prometheusUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.status(404).json({ success: false, error: 'Prometheus not configured' });
 
     const config = JSON.parse(integration.config || '{}');
@@ -76,7 +124,23 @@ router.post('/prometheus/test', async (req, res) => {
 // Alertmanager proxy - get alerts
 router.get('/alertmanager/alerts', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'ALERTMANAGER' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'ALERTMANAGER' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.alertmanagerUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'ALERTMANAGER',
+            config: JSON.stringify({ url: leConfig.alertmanagerUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: [] });
 
     const config = JSON.parse(integration.config || '{}');
@@ -92,7 +156,23 @@ router.get('/alertmanager/alerts', async (req, res) => {
 // Alertmanager proxy - get status
 router.get('/alertmanager/status', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'ALERTMANAGER' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'ALERTMANAGER' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.alertmanagerUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'ALERTMANAGER',
+            config: JSON.stringify({ url: leConfig.alertmanagerUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: {} });
 
     const config = JSON.parse(integration.config || '{}');
@@ -108,7 +188,23 @@ router.get('/alertmanager/status', async (req, res) => {
 // Test Alertmanager connection
 router.post('/alertmanager/test', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'ALERTMANAGER' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'ALERTMANAGER' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.alertmanagerUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'ALERTMANAGER',
+            config: JSON.stringify({ url: leConfig.alertmanagerUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.status(404).json({ success: false, error: 'Alertmanager not configured' });
 
     const config = JSON.parse(integration.config || '{}');
@@ -131,7 +227,23 @@ router.post('/alertmanager/test', async (req, res) => {
 // Test Grafana connection
 router.post('/grafana/test', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'GRAFANA' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'GRAFANA' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.grafanaUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'GRAFANA',
+            config: JSON.stringify({ url: leConfig.grafanaUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.status(404).json({ success: false, error: 'Grafana not configured' });
 
     const config = JSON.parse(integration.config || '{}');
@@ -158,7 +270,23 @@ router.post('/grafana/test', async (req, res) => {
 // Get Loki labels
 router.get('/loki/labels', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.lokiUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'LOKI',
+            config: JSON.stringify({ url: leConfig.lokiUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: [] });
 
     const config = JSON.parse(integration.config || '{}');
@@ -178,7 +306,23 @@ router.get('/loki/labels', async (req, res) => {
 // Get Loki label values
 router.get('/loki/label/:name/values', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.lokiUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'LOKI',
+            config: JSON.stringify({ url: leConfig.lokiUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: [] });
 
     const config = JSON.parse(integration.config || '{}');
@@ -198,7 +342,23 @@ router.get('/loki/label/:name/values', async (req, res) => {
 // Query Loki logs
 router.get('/loki/query', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.lokiUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'LOKI',
+            config: JSON.stringify({ url: leConfig.lokiUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: { result: [] } });
 
     const config = JSON.parse(integration.config || '{}');
@@ -225,7 +385,23 @@ router.get('/loki/query', async (req, res) => {
 // Query Loki instant
 router.get('/loki/query_instant', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.lokiUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'LOKI',
+            config: JSON.stringify({ url: leConfig.lokiUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: { result: [] } });
 
     const config = JSON.parse(integration.config || '{}');
@@ -251,7 +427,23 @@ router.get('/loki/query_instant', async (req, res) => {
 // Get Loki series
 router.get('/loki/series', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.lokiUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'LOKI',
+            config: JSON.stringify({ url: leConfig.lokiUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: [] });
 
     const config = JSON.parse(integration.config || '{}');
@@ -279,7 +471,23 @@ router.get('/loki/series', async (req, res) => {
 // Get Loki stats
 router.get('/loki/stats', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.lokiUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'LOKI',
+            config: JSON.stringify({ url: leConfig.lokiUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.json({ success: true, data: {} });
 
     const config = JSON.parse(integration.config || '{}');
@@ -307,7 +515,23 @@ router.get('/loki/stats', async (req, res) => {
 // Test Loki connection
 router.post('/loki/test', async (req, res) => {
   try {
-    const integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+    let integration = await prisma.integration.findFirst({ where: { type: 'LOKI' } });
+
+    // Fallback to LINKEDEYE_MONITORING
+    if (!integration) {
+      const leIntegration = await prisma.integration.findFirst({ where: { type: 'LINKEDEYE_MONITORING' } });
+      if (leIntegration) {
+        const leConfig = JSON.parse(leIntegration.config || '{}');
+        if (leConfig.lokiUrl) {
+          integration = {
+            id: leIntegration.id,
+            type: 'LOKI',
+            config: JSON.stringify({ url: leConfig.lokiUrl, ...leConfig })
+          };
+        }
+      }
+    }
+
     if (!integration) return res.status(404).json({ success: false, error: 'Loki not configured' });
 
     const config = JSON.parse(integration.config || '{}');

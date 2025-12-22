@@ -71,6 +71,27 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Update alert details
+router.put('/:id', async (req, res) => {
+  try {
+    const { status, severity, description, name } = req.body;
+    const data = {};
+    if (status) data.status = status;
+    if (severity) data.severity = severity;
+    if (description) data.description = description;
+    if (name) data.name = name; // Alert name/short description
+
+    const alert = await prisma.alert.update({
+      where: { id: req.params.id },
+      data
+    });
+    res.json({ success: true, data: alert });
+  } catch (error) {
+    logger.error('Update alert error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update alert' });
+  }
+});
+
 // Acknowledge alert
 router.post('/:id/acknowledge', async (req, res) => {
   try {

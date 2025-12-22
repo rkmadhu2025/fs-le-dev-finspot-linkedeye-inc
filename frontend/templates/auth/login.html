@@ -2,200 +2,141 @@
 
 {% block title %}Login | {{ app_name }}{% endblock %}
 
-{% block body_class %}auth-page{% endblock %}
+{% block body_class %}auth-page-split{% endblock %}
 
 {% block body %}
-<div class="auth-container">
-    <div class="auth-box">
-        <!-- Left Panel - Network Visualization -->
-        <div class="auth-left">
-            <!-- Animated Network Background -->
-            <div class="network-bg">
-                <div class="network-lines">
-                    <svg width="100%" height="100%" class="network-svg">
-                        <defs>
-                            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" style="stop-color:#00f5ff;stop-opacity:0" />
-                                <stop offset="50%" style="stop-color:#00f5ff;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#00f5ff;stop-opacity:0" />
-                            </linearGradient>
-                        </defs>
-                        <!-- Animated connection lines -->
-                        <line class="data-line line-1" x1="10%" y1="30%" x2="90%" y2="30%" />
-                        <line class="data-line line-2" x1="10%" y1="50%" x2="90%" y2="50%" />
-                        <line class="data-line line-3" x1="10%" y1="70%" x2="90%" y2="70%" />
+<div class="login-split-layout">
+    <!-- LEFT SIDE - Video Panel -->
+    <div class="split-left">
+        <video autoplay muted loop playsinline class="split-video">
+            <source src="{{ url_for('static', filename='images/login-bg.mp4') }}" type="video/mp4">
+        </video>
+        <div class="split-video-overlay"></div>
+
+        <!-- Branding on Video -->
+        <div class="video-branding">
+            <div class="brand-logo">
+                <div class="brand-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="3" fill="#fff" />
+                        <circle cx="12" cy="12" r="8" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 2" />
+                        <circle cx="12" cy="4" r="2" fill="#a78bfa" />
+                        <circle cx="20" cy="12" r="2" fill="#f472b6" />
+                        <circle cx="12" cy="20" r="2" fill="#38bdf8" />
+                        <circle cx="4" cy="12" r="2" fill="#34d399" />
                     </svg>
                 </div>
-                <div class="network-nodes">
-                    <div class="network-node node-1" title="Sristra">
-                        <i class="fas fa-server"></i>
-                        <span>Sristra</span>
-                    </div>
-                    <div class="network-node node-2" title="Monitoring">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Monitoring</span>
-                    </div>
-                    <div class="network-node node-3" title="Automating">
-                        <i class="fas fa-robot"></i>
-                        <span>Automating</span>
-                    </div>
-                    <div class="network-node node-4" title="Data">
-                        <i class="fas fa-database"></i>
-                        <span>Data</span>
-                    </div>
-                </div>
+                <span class="brand-name">LinkedEye</span>
             </div>
-
-            <div class="auth-logo">
-                <div class="auth-logo-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="3" fill="#00f5ff"/>
-                        <circle cx="12" cy="12" r="8" stroke="#00f5ff" stroke-width="1" stroke-dasharray="4 2"/>
-                        <circle cx="12" cy="4" r="2" fill="#667eea"/>
-                        <circle cx="20" cy="12" r="2" fill="#764ba2"/>
-                        <circle cx="12" cy="20" r="2" fill="#f093fb"/>
-                        <circle cx="4" cy="12" r="2" fill="#00f5ff"/>
-                    </svg>
-                </div>
-                <div class="auth-logo-text">
-                    LinkedEye<br>
-                    <span class="text-muted">FinSpot</span>
-                </div>
-            </div>
-
-            <h1 class="auth-heading">Network Intelligence & Operations Platform</h1>
-            <p class="auth-tagline">{{ app_tagline }}</p>
-
-            <div class="auth-features">
-                <div class="auth-feature">
-                    <div class="auth-feature-icon rot-run">
-                        <i class="fas fa-network-wired"></i>
-                    </div>
-                    <div>
-                        <strong>MONITOR</strong>
-                        <p>Real-time network & infrastructure monitoring</p>
-                    </div>
-                </div>
-
-                <div class="auth-feature">
-                    <div class="auth-feature-icon rot-operate">
-                        <i class="fas fa-cogs"></i>
-                    </div>
-                    <div>
-                        <strong>AUTOMATE</strong>
-                        <p>Intelligent incident response & automation</p>
-                    </div>
-                </div>
-
-                <div class="auth-feature">
-                    <div class="auth-feature-icon rot-transform">
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <div>
-                        <strong>ANALYZE</strong>
-                        <p>AI-powered insights & predictive analytics</p>
-                    </div>
-                </div>
-            </div>
+            <h1 class="brand-headline">Real-time LinkedEye Management Platform</h1>
+            <p class="brand-tagline">Run. Operate. Transform — Intelligently.</p>
         </div>
+    </div>
 
-        <!-- Right Panel - Login Form -->
-        <div class="auth-right">
-            <h2 class="auth-title">Welcome Back</h2>
-            <p class="auth-subtitle">Sign in to your account to continue</p>
+    <!-- RIGHT SIDE - Login Form -->
+    <div class="split-right">
+        <div class="login-form-container">
+            <!-- Header -->
+            <div class="form-header">
+                <h2 class="form-title">Sign in</h2>
+                <p class="form-subtitle">Welcome back! Please enter your details.</p>
+            </div>
 
             <!-- Flash Messages -->
             {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                {% endif %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="form-alert form-alert-{{ category }}">
+                <i class="fas fa-{% if category == 'error' %}exclamation-circle{% else %}check-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
             {% endwith %}
 
-            <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+            <!-- Login Form -->
+            <form method="POST" action="{{ url_for('login') }}" class="login-form-split">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <div class="form-group">
-                    <label class="form-label">Email Address</label>
-                    <div class="input-group">
-                        <span class="input-icon"><i class="fas fa-envelope"></i></span>
-                        <input type="email" name="email" class="form-control" placeholder="you@company.com" required autofocus>
-                    </div>
+                <div class="field-group">
+                    <label class="field-label">Email</label>
+                    <input type="email" name="email" class="field-input" placeholder="Enter your email" required
+                        autofocus>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">
-                        Password
-                        <a href="#" class="forgot-link">Forgot password?</a>
-                    </label>
-                    <div class="input-group">
-                        <span class="input-icon"><i class="fas fa-lock"></i></span>
-                        <input type="password" name="password" class="form-control" placeholder="Enter your password" required id="passwordInput">
-                        <button type="button" class="password-toggle" onclick="togglePassword()">
+                <div class="field-group">
+                    <label class="field-label">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" name="password" id="passwordInput" class="field-input"
+                            placeholder="••••••••" required>
+                        <button type="button" class="eye-toggle" onclick="togglePassword()">
                             <i class="fas fa-eye" id="passwordToggleIcon"></i>
                         </button>
                     </div>
                 </div>
 
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" name="remember" id="remember" class="checkbox">
-                    <label for="remember" class="checkbox-label">Remember me for 30 days</label>
+                <div class="form-options">
+                    <label class="remember-checkbox">
+                        <input type="checkbox" name="remember">
+                        <span class="custom-check"></span>
+                        <span>Remember for 30 days</span>
+                    </label>
+                    <a href="#" class="forgot-link">Forgot password</a>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In
+                <button type="submit" class="btn-signin">
+                    Sign in
+                </button>
+
+                <button type="button" class="btn-google">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    Sign in with Google
                 </button>
             </form>
 
-            <div class="divider">
-                <span>or continue with</span>
-            </div>
-
-            <div class="social-login">
-                <button class="social-btn">
-                    <i class="fab fa-microsoft"></i>
-                    Azure AD
-                </button>
-                <button class="social-btn">
-                    <i class="fab fa-google"></i>
-                    Google
-                </button>
-            </div>
-
-            <p class="auth-link">
-                Don't have an account? <a href="{{ url_for('register') }}">Request Access</a>
+            <!-- Register -->
+            <p class="signup-text">
+                Don't have an account? <a href="{{ url_for('register') }}">Sign up</a>
             </p>
 
             <!-- Demo Credentials -->
-            <div class="demo-credentials">
-                <div class="demo-credentials-title">
-                    <i class="fas fa-info-circle"></i> Demo Credentials
-                </div>
-                <p><strong>Admin:</strong> admin@linkedeye.local / Password123!</p>
-                <p><strong>Manager:</strong> manager@linkedeye.local / Password123!</p>
+            <div class="demo-box">
+                <span class="demo-title"><i class="fas fa-key"></i> Demo Access</span>
+                <span class="demo-email">admin@linkedeye.local</span>
+                <span class="demo-sep">/</span>
+                <span class="demo-pass">Password123!</span>
             </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="split-footer">
+            <p>&copy; 2024 LinkedEye-FinSpot</p>
         </div>
     </div>
 </div>
 
 <script>
-function togglePassword() {
-    const input = document.getElementById('passwordInput');
-    const icon = document.getElementById('passwordToggleIcon');
-
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        input.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
+    function togglePassword() {
+        const input = document.getElementById('passwordInput');
+        const icon = document.getElementById('passwordToggleIcon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     }
-}
 </script>
 {% endblock %}

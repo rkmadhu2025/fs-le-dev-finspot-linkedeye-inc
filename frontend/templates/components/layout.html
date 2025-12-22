@@ -24,12 +24,14 @@
                     Operations
                 </div>
 
-                <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <a href="{{ url_for('dashboard') }}"
+                    class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
                     <i class="nav-icon fas fa-th-large"></i>
                     <span>Dashboard</span>
                 </a>
 
-                <a href="{{ url_for('incidents_list') }}" class="nav-item {% if 'incident' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('incidents_list') }}"
+                    class="nav-item {% if 'incident' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-exclamation-triangle"></i>
                     <span>Incidents</span>
                     {% if quick_stats and quick_stats.openIncidents %}
@@ -37,7 +39,8 @@
                     {% endif %}
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="{{ url_for('alerts_list') }}"
+                    class="nav-item {% if 'alert' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-bell"></i>
                     <span>Alerts</span>
                     {% if quick_stats and quick_stats.activeAlerts %}
@@ -45,7 +48,8 @@
                     {% endif %}
                 </a>
 
-                <a href="{{ url_for('network_topology') }}" class="nav-item {% if 'network' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('network_topology') }}"
+                    class="nav-item {% if 'network' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-network-wired"></i>
                     <span>Network</span>
                 </a>
@@ -58,7 +62,8 @@
                     Control
                 </div>
 
-                <a href="{{ url_for('changes_list') }}" class="nav-item {% if 'change' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('changes_list') }}"
+                    class="nav-item {% if 'change' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-exchange-alt"></i>
                     <span>Changes</span>
                     {% if quick_stats and quick_stats.pendingChanges %}
@@ -66,12 +71,14 @@
                     {% endif %}
                 </a>
 
-                <a href="{{ url_for('problems_list') }}" class="nav-item {% if 'problem' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('problems_list') }}"
+                    class="nav-item {% if 'problem' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-bug"></i>
                     <span>Problems</span>
                 </a>
 
-                <a href="{{ url_for('assets_list') }}" class="nav-item {% if 'asset' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('assets_list') }}"
+                    class="nav-item {% if 'asset' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-server"></i>
                     <span>Assets / CMDB</span>
                 </a>
@@ -84,12 +91,14 @@
                     Intelligence
                 </div>
 
-                <a href="{{ url_for('reports') }}" class="nav-item {% if 'report' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('reports') }}"
+                    class="nav-item {% if 'report' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-chart-bar"></i>
                     <span>Reports</span>
                 </a>
 
-                <a href="{{ url_for('ai_insights') }}" class="nav-item {% if 'ai' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('ai_insights') }}"
+                    class="nav-item {% if 'ai' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-brain"></i>
                     <span>AI Insights</span>
                 </a>
@@ -99,17 +108,20 @@
             <div class="nav-section">
                 <div class="nav-section-title">Management</div>
 
-                <a href="{{ url_for('users_list') }}" class="nav-item {% if 'user' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('users_list') }}"
+                    class="nav-item {% if 'user' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-users"></i>
                     <span>Users & Teams</span>
                 </a>
 
-                <a href="{{ url_for('on_call') }}" class="nav-item {% if 'on_call' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('on_call') }}"
+                    class="nav-item {% if 'on_call' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-phone"></i>
                     <span>On-Call</span>
                 </a>
 
-                <a href="{{ url_for('integrations') }}" class="nav-item {% if 'integration' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('integrations') }}"
+                    class="nav-item {% if 'integration' in request.endpoint %}active{% endif %}">
                     <i class="nav-icon fas fa-plug"></i>
                     <span>Integrations</span>
                 </a>
@@ -179,15 +191,16 @@
         <main class="page-content">
             <!-- Flash Messages -->
             {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
-                        {{ message }}
-                        <button class="alert-close">&times;</button>
-                    </div>
-                    {% endfor %}
-                {% endif %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                <i
+                    class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+                {{ message }}
+                <button class="alert-close">&times;</button>
+            </div>
+            {% endfor %}
+            {% endif %}
             {% endwith %}
 
             {% block content %}{% endblock %}

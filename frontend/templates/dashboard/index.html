@@ -3,6 +3,57 @@
 {% block title %}Operations Dashboard | {{ app_name }}{% endblock %}
 
 {% block content %}
+<!-- Hero Banner Section -->
+<div class="hero-banner">
+    <div class="hero-image-container">
+        <img src="{{ url_for('static', filename='images/linkedeye-hero.jpg') }}" alt="LinkedEye Infrastructure"
+            class="hero-image">
+        <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-content">
+        <div class="hero-badge">
+            <i class="fas fa-shield-alt"></i>
+            <span>Enterprise Infrastructure Monitoring</span>
+        </div>
+        <h1 class="hero-title">
+            <span class="hero-title-main">LinkedEye</span>
+            <span class="hero-title-sub">Network Operations Center</span>
+        </h1>
+        <p class="hero-tagline">
+            <span class="tagline-word">Run.</span>
+            <span class="tagline-word">Operate.</span>
+            <span class="tagline-word">Transform</span>
+            <span class="tagline-highlight">Infrastructure — Intelligently.</span>
+        </p>
+        <div class="hero-actions">
+            <a href="{{ url_for('incident_create') }}" class="btn btn-hero-primary">
+                <i class="fas fa-plus"></i> New Incident
+            </a>
+            <a href="{{ url_for('network_topology') }}" class="btn btn-hero-secondary">
+                <i class="fas fa-network-wired"></i> Network Map
+            </a>
+        </div>
+    </div>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="hero-stat-value" id="hero-uptime">99.9%</div>
+            <div class="hero-stat-label">Uptime</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-value" id="hero-servers">42</div>
+            <div class="hero-stat-label">Active Servers</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-value" id="hero-alerts">{{ kpis.activeAlerts.value|default(0) }}</div>
+            <div class="hero-stat-label">Active Alerts</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-value" id="hero-incidents">{{ kpis.openIncidents.value|default(0) }}</div>
+            <div class="hero-stat-label">Open Incidents</div>
+        </div>
+    </div>
+</div>
+
 <div class="page-header">
     <div>
         <h1 class="page-title">
@@ -25,6 +76,7 @@
         </a>
     </div>
 </div>
+
 
 <!-- Network Status Overview -->
 <div class="network-status-bar">
@@ -280,37 +332,39 @@
                 </thead>
                 <tbody>
                     {% if dashboard_data.recentIncidents %}
-                        {% for incident in dashboard_data.recentIncidents[:5] %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('incident_detail', incident_id=incident.id) }}" class="table-link">
-                                    {{ incident.number }}
-                                </a>
-                            </td>
-                            <td class="truncate">{{ incident.shortDescription }}</td>
-                            <td>
-                                <span class="badge badge-{{ 'critical' if incident.priority == 'P1' else 'high' if incident.priority == 'P2' else 'medium' if incident.priority == 'P3' else 'low' }}">
-                                    {{ incident.priority }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge badge-{{ 'new' if incident.state == 'NEW' else 'in-progress' if incident.state == 'IN_PROGRESS' else 'resolved' if incident.state == 'RESOLVED' else 'closed' }}">
-                                    {{ incident.state|replace('_', ' ') }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if incident.assignedTo %}
-                                    {{ incident.assignedTo.firstName }} {{ incident.assignedTo.lastName }}
-                                {% else %}
-                                    <span class="text-muted">Unassigned</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    {% for incident in dashboard_data.recentIncidents[:5] %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('incident_detail', incident_id=incident.id) }}" class="table-link">
+                                {{ incident.number }}
+                            </a>
+                        </td>
+                        <td class="truncate">{{ incident.shortDescription }}</td>
+                        <td>
+                            <span
+                                class="badge badge-{{ 'critical' if incident.priority == 'P1' else 'high' if incident.priority == 'P2' else 'medium' if incident.priority == 'P3' else 'low' }}">
+                                {{ incident.priority }}
+                            </span>
+                        </td>
+                        <td>
+                            <span
+                                class="badge badge-{{ 'new' if incident.state == 'NEW' else 'in-progress' if incident.state == 'IN_PROGRESS' else 'resolved' if incident.state == 'RESOLVED' else 'closed' }}">
+                                {{ incident.state|replace('_', ' ') }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if incident.assignedTo %}
+                            {{ incident.assignedTo.firstName }} {{ incident.assignedTo.lastName }}
+                            {% else %}
+                            <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
                     {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">No recent incidents</td>
-                        </tr>
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No recent incidents</td>
+                    </tr>
                     {% endif %}
                 </tbody>
             </table>
@@ -328,24 +382,26 @@
         <div class="card-body">
             <div class="activity-feed" id="activityFeed">
                 {% if dashboard_data.recentActivities %}
-                    {% for activity in dashboard_data.recentActivities[:10] %}
-                    <div class="activity-item">
-                        <div class="activity-icon {{ activity.action|lower }}">
-                            <i class="fas fa-{% if activity.action == 'CREATED' %}plus{% elif activity.action == 'UPDATED' %}edit{% elif activity.action == 'RESOLVED' %}check{% elif activity.action == 'ASSIGNED' %}user{% else %}circle{% endif %}"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-text">
-                                {% if activity.incident %}
-                                <a href="{{ url_for('incident_detail', incident_id=activity.incident.id) }}">{{ activity.incident.number }}</a>
-                                {% endif %}
-                                {{ activity.description }}
-                            </div>
-                            <div class="activity-time">{{ activity.createdAt }}</div>
-                        </div>
+                {% for activity in dashboard_data.recentActivities[:10] %}
+                <div class="activity-item">
+                    <div class="activity-icon {{ activity.action|lower }}">
+                        <i
+                            class="fas fa-{% if activity.action == 'CREATED' %}plus{% elif activity.action == 'UPDATED' %}edit{% elif activity.action == 'RESOLVED' %}check{% elif activity.action == 'ASSIGNED' %}user{% else %}circle{% endif %}"></i>
                     </div>
-                    {% endfor %}
+                    <div class="activity-content">
+                        <div class="activity-text">
+                            {% if activity.incident %}
+                            <a href="{{ url_for('incident_detail', incident_id=activity.incident.id) }}">{{
+                                activity.incident.number }}</a>
+                            {% endif %}
+                            {{ activity.description }}
+                        </div>
+                        <div class="activity-time">{{ activity.createdAt }}</div>
+                    </div>
+                </div>
+                {% endfor %}
                 {% else %}
-                    <div class="text-center text-muted">No recent activity</div>
+                <div class="text-center text-muted">No recent activity</div>
                 {% endif %}
             </div>
         </div>
@@ -356,129 +412,129 @@
 {% block extra_js %}
 {{ super() }}
 <script>
-// Incident Trend Chart
-const trendCtx = document.getElementById('incidentTrendChart').getContext('2d');
-const trendChart = new Chart(trendCtx, {
-    type: 'line',
-    data: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [
-            {
-                label: 'P1 Critical',
-                data: [2, 3, 1, 4, 2, 1, 3],
-                borderColor: '#dc3545',
-                backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                fill: true,
-                tension: 0.4
-            },
-            {
-                label: 'P2 High',
-                data: [8, 12, 10, 15, 8, 5, 9],
-                borderColor: '#f59e0b',
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                fill: true,
-                tension: 0.4
-            },
-            {
-                label: 'P3 Medium',
-                data: [15, 18, 22, 19, 16, 10, 14],
-                borderColor: '#0ea5e9',
-                backgroundColor: 'rgba(14, 165, 233, 0.1)',
-                fill: true,
-                tension: 0.4
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
+    // Incident Trend Chart
+    const trendCtx = document.getElementById('incidentTrendChart').getContext('2d');
+    const trendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [
+                {
+                    label: 'P1 Critical',
+                    data: [2, 3, 1, 4, 2, 1, 3],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'P2 High',
+                    data: [8, 12, 10, 15, 8, 5, 9],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'P3 Medium',
+                    data: [15, 18, 22, 19, 16, 10, 14],
+                    borderColor: '#0ea5e9',
+                    backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
         },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
                 }
             },
-            x: {
-                grid: {
-                    display: false
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
                 }
             }
         }
-    }
-});
+    });
 
-// SLA Gauge
-const gaugeCtx = document.getElementById('slaGauge').getContext('2d');
-new Chart(gaugeCtx, {
-    type: 'doughnut',
-    data: {
-        datasets: [{
-            data: [94.2, 5.8],
-            backgroundColor: ['#22c55e', '#e5e7eb'],
-            borderWidth: 0
-        }]
-    },
-    options: {
-        cutout: '75%',
-        rotation: -90,
-        circumference: 180,
-        plugins: {
-            legend: { display: false },
-            tooltip: { enabled: false }
+    // SLA Gauge
+    const gaugeCtx = document.getElementById('slaGauge').getContext('2d');
+    new Chart(gaugeCtx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [94.2, 5.8],
+                backgroundColor: ['#22c55e', '#e5e7eb'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '75%',
+            rotation: -90,
+            circumference: 180,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
         }
-    }
-});
+    });
 
-// Auto-refresh toggle
-let autoRefresh = true;
-let refreshInterval;
+    // Auto-refresh toggle
+    let autoRefresh = true;
+    let refreshInterval;
 
-document.getElementById('autoRefreshToggle').addEventListener('click', function() {
-    autoRefresh = !autoRefresh;
-    this.innerHTML = autoRefresh
-        ? '<i class="fas fa-sync-alt"></i> Auto-refresh: ON'
-        : '<i class="fas fa-sync-alt"></i> Auto-refresh: OFF';
+    document.getElementById('autoRefreshToggle').addEventListener('click', function () {
+        autoRefresh = !autoRefresh;
+        this.innerHTML = autoRefresh
+            ? '<i class="fas fa-sync-alt"></i> Auto-refresh: ON'
+            : '<i class="fas fa-sync-alt"></i> Auto-refresh: OFF';
 
-    if (autoRefresh) {
-        startAutoRefresh();
-    } else {
-        clearInterval(refreshInterval);
-    }
-});
-
-function startAutoRefresh() {
-    refreshInterval = setInterval(refreshStats, 30000);
-}
-
-function refreshStats() {
-    // Refresh KPIs
-    fetch('/api/proxy/dashboard/kpis', {
-        headers: {
-            'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
+        if (autoRefresh) {
+            startAutoRefresh();
+        } else {
+            clearInterval(refreshInterval);
         }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('kpi-critical').textContent = data.data.criticalIncidents?.value || 0;
-                document.getElementById('kpi-open').textContent = data.data.openIncidents?.value || 0;
-                document.getElementById('kpi-resolved').textContent = data.data.resolvedToday?.value || 0;
-                document.getElementById('kpi-mttr').textContent = data.data.mttr?.formatted || '0m';
-                document.getElementById('kpi-alerts').textContent = data.data.activeAlerts?.value || 0;
+    });
+
+    function startAutoRefresh() {
+        refreshInterval = setInterval(refreshStats, 30000);
+    }
+
+    function refreshStats() {
+        // Refresh KPIs
+        fetch('/api/proxy/dashboard/kpis', {
+            headers: {
+                'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
             }
         })
-        .catch(error => {
-            console.error('Error refreshing stats:', error);
-        });
-}
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('kpi-critical').textContent = data.data.criticalIncidents?.value || 0;
+                    document.getElementById('kpi-open').textContent = data.data.openIncidents?.value || 0;
+                    document.getElementById('kpi-resolved').textContent = data.data.resolvedToday?.value || 0;
+                    document.getElementById('kpi-mttr').textContent = data.data.mttr?.formatted || '0m';
+                    document.getElementById('kpi-alerts').textContent = data.data.activeAlerts?.value || 0;
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing stats:', error);
+            });
+    }
 
-// Start auto-refresh on page load
-startAutoRefresh();
+    // Start auto-refresh on page load
+    startAutoRefresh();
 </script>
 {% endblock %}

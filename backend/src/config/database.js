@@ -12,15 +12,35 @@ const prisma = new PrismaClient({
   errorFormat: 'pretty'
 });
 
-// Connection test
+// Connection test with retry logic
 async function connectDatabase() {
-  try {
-    await prisma.$connect();
-    console.log('✅ Database connected successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    return false;
+  const MAX_RETRIES = 5;
+  const RETRY_DELAY = 5000; // 5 seconds
+  let retries = 0;
+
+  while (retries < MAX_RETRIES) {
+    try {
+      const dbUrl = process.env.DATABASE_URL || '';
+      // Mask password in logs
+      const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':****@');
+      console.log(`Check Database connection to: ${maskedUrl}`);
+
+      await prisma.$connect();
+      console.log('✅ Database connected successfully');
+      return true;
+    } catch (error) {
+      retries++;
+      console.error(`❌ Database connection failed (Attempt ${retries}/${MAX_RETRIES}):`, error.message);
+
+      if (retries >= MAX_RETRIES) {
+        console.error('Max retries reached. Exiting...');
+        // Don't exit process here, let server handle it or crash
+        return false;
+      }
+
+      console.log(`Retrying in ${RETRY_DELAY / 1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+    }
   }
 }
 

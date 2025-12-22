@@ -41,6 +41,7 @@ const logger = require('./utils/logger');
 const { initializeWebSocket } = require('./services/websocket.service');
 const schedulerService = require('./services/scheduler.service');
 const emailService = require('./services/email.service');
+const { connectDatabase } = require('./config/database');
 
 const app = express();
 const httpServer = createServer(app);
@@ -56,6 +57,13 @@ const io = new Server(httpServer, {
 
 // Make io accessible to routes
 app.set('io', io);
+
+// Initialize Database connection
+connectDatabase().then(connected => {
+  if (!connected) {
+    logger.error('Failed to establish initial database connection. Server starting but may be unstable.');
+  }
+});
 
 // ============================================
 // MIDDLEWARE CONFIGURATION

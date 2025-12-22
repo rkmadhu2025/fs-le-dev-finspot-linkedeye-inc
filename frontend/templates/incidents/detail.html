@@ -400,7 +400,8 @@
                 <!-- Work Notes Tab -->
                 <div class="tab-content active" id="tab-notes">
                     <div class="add-note-form">
-                        <textarea class="form-textarea" id="new-note" placeholder="Add a work note..." rows="3"></textarea>
+                        <textarea class="form-textarea" id="new-note" placeholder="Add a work note..."
+                            rows="3"></textarea>
                         <div class="add-note-actions">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="note-internal">
@@ -635,7 +636,8 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Resolution Notes <span class="required">*</span></label>
-                <textarea class="form-textarea" id="resolution-notes" rows="4" placeholder="Describe how the incident was resolved..."></textarea>
+                <textarea class="form-textarea" id="resolution-notes" rows="4"
+                    placeholder="Describe how the incident was resolved..."></textarea>
             </div>
             <div class="form-group">
                 <label class="checkbox-label">
@@ -678,7 +680,8 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Assignment Notes</label>
-                <textarea class="form-textarea" id="assign-notes" rows="3" placeholder="Optional notes for the assignee..."></textarea>
+                <textarea class="form-textarea" id="assign-notes" rows="3"
+                    placeholder="Optional notes for the assignee..."></textarea>
             </div>
         </div>
         <div class="modal-footer">
@@ -689,137 +692,178 @@
         </div>
     </div>
 </div>
+<!-- Edit Summary Modal -->
+<div class="modal" id="edit-summary-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Incident Summary</h3>
+            <button class="modal-close" onclick="closeModal('edit-summary-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Short Description <span class="required">*</span></label>
+                <input type="text" class="form-control" id="edit-short-description">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-textarea" id="edit-description" rows="6"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('edit-summary-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitEditSummary()">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const incidentId = '{{ incident_id }}';
-let incident = null;
+    const incidentId = '{{ incident_id }}';
+    let incident = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadIncident();
-    setupTabs();
-    setupWebSocket();
-});
-
-function setupTabs() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tab = this.dataset.tab;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            this.classList.add('active');
-            document.getElementById('tab-' + tab).classList.add('active');
-
-            if (tab === 'history' && !document.getElementById('history-timeline').dataset.loaded) {
-                loadHistory();
-            }
-        });
+    document.addEventListener('DOMContentLoaded', function () {
+        loadIncident();
+        setupTabs();
+        setupWebSocket();
     });
-}
 
-function setupWebSocket() {
-    if (typeof io !== 'undefined') {
-        const socket = io();
-        socket.emit('join:incident', incidentId);
+    function setupTabs() {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const tab = this.dataset.tab;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('tab-' + tab).classList.add('active');
 
-        socket.on('incident:updated', (data) => {
-            if (data.id === incidentId) {
-                loadIncident();
-            }
-        });
-
-        socket.on('incident:note:added', (data) => {
-            if (data.incidentId === incidentId) {
-                loadNotes();
-            }
+                if (tab === 'history' && !document.getElementById('history-timeline').dataset.loaded) {
+                    loadHistory();
+                }
+            });
         });
     }
-}
 
-async function loadIncident() {
-    try {
-        const response = await fetch(`/api/proxy/incidents/${incidentId}`, {
-            headers: {
-                'Authorization': 'Bearer ' + getToken()
-            }
-        });
+    function setupWebSocket() {
+        if (typeof io !== 'undefined') {
+            const socket = io();
+            socket.emit('join:incident', incidentId);
 
-        const data = await response.json();
+            socket.on('incident:updated', (data) => {
+                if (data.id === incidentId) {
+                    loadIncident();
+                }
+            });
 
-        if (data.success) {
-            incident = data.data;
-            renderIncident(incident);
-            loadNotes();
-        } else {
-            showError('Failed to load incident');
+            socket.on('incident:note:added', (data) => {
+                if (data.incidentId === incidentId) {
+                    loadNotes();
+                }
+            });
         }
-    } catch (error) {
-        console.error('Error loading incident:', error);
-        showError('Failed to load incident');
-    }
-}
-
-function renderIncident(inc) {
-    if (!inc) {
-        showError('Incident data not available');
-        return;
     }
 
-    // Page header
-    document.getElementById('incident-number').textContent = inc.number || 'Unknown';
-    document.getElementById('incident-title').textContent = inc.shortDescription || 'No description';
-    document.title = `${inc.number || 'Incident'} - LinkedEye-FinSpot`;
+    async function loadIncident() {
+        console.log('[DEBUG] Loading incident:', incidentId);
+        console.log('[DEBUG] Token present:', !!getToken());
 
-    // Status banner
-    updateStatusBanner(inc);
+        try {
+            const url = `/api/proxy/incidents/${incidentId}`;
+            console.log('[DEBUG] Fetching URL:', url);
 
-    // Summary
-    document.getElementById('short-description').textContent = inc.shortDescription || '-';
-    document.getElementById('description').innerHTML = formatDescription(inc.description);
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': 'Bearer ' + getToken()
+                }
+            });
 
-    // Classification
-    const stateEl = document.getElementById('detail-state');
-    const state = inc.state || 'NEW';
-    stateEl.textContent = formatState(state);
-    stateEl.className = `badge badge-state badge-${state.toLowerCase().replace('_', '-')}`;
+            console.log('[DEBUG] Response status:', response.status, response.statusText);
+            console.log('[DEBUG] Response headers:', [...response.headers.entries()]);
 
-    const priorityEl = document.getElementById('detail-priority');
-    const priority = inc.priority || 'P4';
-    priorityEl.textContent = priority;
-    priorityEl.className = `badge badge-priority badge-${priority.toLowerCase()}`;
+            const data = await response.json();
+            console.log('[DEBUG] Response data:', JSON.stringify(data, null, 2));
 
-    document.getElementById('detail-impact').textContent = inc.impact || '-';
-    document.getElementById('detail-urgency').textContent = inc.urgency || '-';
-    document.getElementById('detail-category').textContent = inc.category || '-';
-    document.getElementById('detail-subcategory').textContent = inc.subcategory || '-';
+            if (data.success) {
+                incident = data.data;
+                console.log('[DEBUG] Incident loaded successfully:', incident.number);
+                renderIncident(incident);
+                loadNotes();
+            } else {
+                console.error('[DEBUG] API returned error:', data.error);
+                showError(data.error || 'Failed to load incident');
+            }
+        } catch (error) {
+            console.error('[DEBUG] Exception loading incident:', error);
+            console.error('[DEBUG] Error stack:', error.stack);
+            showError('Failed to load incident: ' + error.message);
+        }
+    }
 
-    const sourceEl = document.getElementById('detail-source');
-    sourceEl.textContent = inc.source || 'MANUAL';
-    sourceEl.className = `source-badge source-${(inc.source || 'manual').toLowerCase()}`;
+    function renderIncident(inc) {
+        if (!inc) {
+            showError('Incident data not available');
+            return;
+        }
 
-    // Assignment
-    if (inc.assignedTo) {
-        document.getElementById('detail-assigned-to').innerHTML = `
+        // Page header
+        document.getElementById('incident-number').textContent = inc.number || 'Unknown';
+        document.getElementById('incident-title').textContent = inc.shortDescription || 'No description';
+        document.title = `${inc.number || 'Incident'} - LinkedEye-FinSpot`;
+
+        // Status banner
+        updateStatusBanner(inc);
+
+        // Summary
+        document.getElementById('short-description').textContent = inc.shortDescription || '-';
+        document.getElementById('description').innerHTML = formatDescription(inc.description);
+
+        // Classification
+        const stateEl = document.getElementById('detail-state');
+        const state = inc.state || 'NEW';
+        stateEl.textContent = formatState(state);
+        stateEl.className = `badge badge-state badge-${state.toLowerCase().replace('_', '-')}`;
+
+        const priorityEl = document.getElementById('detail-priority');
+        const priority = inc.priority || 'P4';
+        priorityEl.textContent = priority;
+        priorityEl.className = `badge badge-priority badge-${priority.toLowerCase()}`;
+
+        document.getElementById('detail-impact').textContent = inc.impact || '-';
+        document.getElementById('detail-urgency').textContent = inc.urgency || '-';
+        document.getElementById('detail-category').textContent = inc.category || '-';
+        document.getElementById('detail-subcategory').textContent = inc.subcategory || '-';
+
+        const sourceEl = document.getElementById('detail-source');
+        sourceEl.textContent = inc.source || 'MANUAL';
+        sourceEl.className = `source-badge source-${(inc.source || 'manual').toLowerCase()}`;
+
+        // Assignment
+        if (inc.assignedTo) {
+            document.getElementById('detail-assigned-to').innerHTML = `
             <span class="avatar avatar-sm">${getInitials(inc.assignedTo.firstName, inc.assignedTo.lastName)}</span>
             <span>${inc.assignedTo.firstName} ${inc.assignedTo.lastName}</span>
         `;
-    } else {
-        document.getElementById('detail-assigned-to').innerHTML = '<span class="text-muted">Unassigned</span>';
-    }
+        } else {
+            document.getElementById('detail-assigned-to').innerHTML = '<span class="text-muted">Unassigned</span>';
+        }
 
-    document.getElementById('detail-assignment-group').textContent = inc.assignmentGroup?.name || '-';
+        document.getElementById('detail-assignment-group').textContent = inc.assignmentGroup?.name || '-';
 
-    if (inc.createdBy) {
-        document.getElementById('detail-created-by').innerHTML = `
+        if (inc.createdBy) {
+            document.getElementById('detail-created-by').innerHTML = `
             <span class="avatar avatar-sm">${getInitials(inc.createdBy.firstName, inc.createdBy.lastName)}</span>
             <span>${inc.createdBy.firstName} ${inc.createdBy.lastName}</span>
         `;
-    }
+        }
 
-    // Configuration Item
-    if (inc.configItem) {
-        document.getElementById('ci-card').innerHTML = `
+        // Configuration Item
+        if (inc.configItem) {
+            document.getElementById('ci-card').innerHTML = `
             <div class="ci-info">
                 <div class="ci-icon">
                     <i class="fas fa-${getCIIcon(inc.configItem.type)}"></i>
@@ -832,347 +876,347 @@ function renderIncident(inc) {
             </div>
             <a href="/assets/${inc.configItem.id}" class="btn btn-text btn-sm">View CI</a>
         `;
+        }
+
+        // SLA
+        renderSLA(inc);
+
+        // Timestamps
+        document.getElementById('detail-created').textContent = formatDateTime(inc.createdAt);
+        document.getElementById('detail-updated').textContent = formatDateTime(inc.updatedAt);
+        document.getElementById('detail-response-time').textContent = inc.responseTime ? formatDateTime(inc.responseTime) : '-';
+        document.getElementById('detail-resolved').textContent = inc.resolvedAt ? formatDateTime(inc.resolvedAt) : '-';
+        document.getElementById('detail-closed').textContent = inc.closedAt ? formatDateTime(inc.closedAt) : '-';
+
+        // Render Prometheus/Alert details if from automated source
+        renderAlertDetails(inc);
     }
 
-    // SLA
-    renderSLA(inc);
+    function renderAlertDetails(inc) {
+        const source = (inc.source || '').toUpperCase();
+        const isAutomated = ['PROMETHEUS', 'ALERTMANAGER', 'GRAFANA', 'API'].includes(source);
 
-    // Timestamps
-    document.getElementById('detail-created').textContent = formatDateTime(inc.createdAt);
-    document.getElementById('detail-updated').textContent = formatDateTime(inc.updatedAt);
-    document.getElementById('detail-response-time').textContent = inc.responseTime ? formatDateTime(inc.responseTime) : '-';
-    document.getElementById('detail-resolved').textContent = inc.resolvedAt ? formatDateTime(inc.resolvedAt) : '-';
-    document.getElementById('detail-closed').textContent = inc.closedAt ? formatDateTime(inc.closedAt) : '-';
+        if (!isAutomated) {
+            // Hide alert-related elements for manual incidents
+            document.getElementById('auto-creation-banner').style.display = 'none';
+            document.getElementById('metrics-grid').style.display = 'none';
+            document.getElementById('alert-details-card').style.display = 'none';
+            document.getElementById('grafana-panel').style.display = 'none';
+            document.getElementById('query-card').style.display = 'none';
+            return;
+        }
 
-    // Render Prometheus/Alert details if from automated source
-    renderAlertDetails(inc);
-}
+        // Parse alert data from description
+        const alertData = parseAlertFromDescription(inc.description, inc.shortDescription);
 
-function renderAlertDetails(inc) {
-    const source = (inc.source || '').toUpperCase();
-    const isAutomated = ['PROMETHEUS', 'ALERTMANAGER', 'GRAFANA', 'API'].includes(source);
+        // Show Auto-Creation Banner
+        const banner = document.getElementById('auto-creation-banner');
+        banner.style.display = 'flex';
+        document.getElementById('banner-title').textContent = `Incident Auto-Created from ${source}`;
+        document.getElementById('banner-created').textContent = `Created: ${formatDateTime(inc.createdAt)}`;
+        document.getElementById('banner-server').textContent = `Server: ${alertData.instance || 'Unknown'}`;
+        document.getElementById('banner-metric').textContent = `Alert: ${alertData.alertname || inc.shortDescription}`;
+        document.getElementById('banner-severity').textContent = `Severity: ${alertData.severity || 'warning'}`;
 
-    if (!isAutomated) {
-        // Hide alert-related elements for manual incidents
-        document.getElementById('auto-creation-banner').style.display = 'none';
-        document.getElementById('metrics-grid').style.display = 'none';
-        document.getElementById('alert-details-card').style.display = 'none';
-        document.getElementById('grafana-panel').style.display = 'none';
-        document.getElementById('query-card').style.display = 'none';
-        return;
+        // Update Grafana link
+        if (alertData.instance) {
+            const grafanaUrl = `https://fs-le-grafana.finspot.in/d/node-exporter/node-exporter?var-instance=${encodeURIComponent(alertData.instance)}`;
+            document.getElementById('grafana-link').href = grafanaUrl;
+        }
+
+        // Show Metrics Grid
+        const metricsGrid = document.getElementById('metrics-grid');
+        metricsGrid.style.display = 'grid';
+
+        // Set metrics based on alert type
+        const primaryMetric = document.getElementById('metric-primary');
+        const primaryLabel = document.getElementById('metric-primary-label');
+        const primaryChange = document.getElementById('metric-primary-change');
+
+        if (alertData.alertname && alertData.alertname.toLowerCase().includes('cpu')) {
+            primaryMetric.textContent = alertData.value || '> 95%';
+            primaryMetric.className = 'metric-value critical';
+            primaryLabel.textContent = 'CPU Usage';
+            primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
+            primaryChange.className = 'metric-change up';
+        } else if (alertData.alertname && alertData.alertname.toLowerCase().includes('memory')) {
+            primaryMetric.textContent = alertData.value || '> 90%';
+            primaryMetric.className = 'metric-value warning';
+            primaryLabel.textContent = 'Memory Usage';
+            primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
+            primaryChange.className = 'metric-change up';
+        } else if (alertData.alertname && alertData.alertname.toLowerCase().includes('disk')) {
+            primaryMetric.textContent = alertData.value || '> 85%';
+            primaryMetric.className = 'metric-value warning';
+            primaryLabel.textContent = 'Disk Usage';
+            primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
+            primaryChange.className = 'metric-change up';
+        } else {
+            primaryMetric.textContent = alertData.severity === 'critical' ? 'CRITICAL' : 'WARNING';
+            primaryMetric.className = `metric-value ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
+            primaryLabel.textContent = 'Alert Status';
+            primaryChange.textContent = alertData.alertname || 'Active Alert';
+        }
+
+        // Secondary metric: Instance
+        document.getElementById('metric-secondary').textContent = alertData.instance ? alertData.instance.split(':')[0] : '-';
+        document.getElementById('metric-secondary-label').textContent = 'Instance';
+        document.getElementById('metric-secondary-change').textContent = alertData.job || 'node_exporter';
+
+        // Tertiary metric: Severity
+        const severityEl = document.getElementById('metric-tertiary');
+        severityEl.textContent = (alertData.severity || 'warning').toUpperCase();
+        severityEl.className = `metric-value ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
+        document.getElementById('metric-tertiary-label').textContent = 'Severity';
+
+        // Incident Age
+        const ageMs = Date.now() - new Date(inc.createdAt).getTime();
+        const ageMinutes = Math.floor(ageMs / 60000);
+        const ageHours = Math.floor(ageMinutes / 60);
+        document.getElementById('metric-age').textContent = ageHours > 0 ? `${ageHours}h ${ageMinutes % 60}m` : `${ageMinutes}m`;
+
+        // Show Alert Details Card
+        const alertCard = document.getElementById('alert-details-card');
+        alertCard.style.display = 'block';
+        document.getElementById('alert-source-badge').textContent = source;
+        document.getElementById('alert-name').textContent = alertData.alertname || inc.shortDescription;
+
+        const severityBadge = document.getElementById('alert-severity');
+        severityBadge.textContent = alertData.severity || 'warning';
+        severityBadge.className = `severity-badge ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
+
+        document.getElementById('alert-instance').textContent = alertData.instance || '-';
+        document.getElementById('alert-job').textContent = alertData.job || 'node_exporter';
+
+        // Render labels
+        const labelsContainer = document.getElementById('alert-labels');
+        if (alertData.labels && Object.keys(alertData.labels).length > 0) {
+            labelsContainer.innerHTML = Object.entries(alertData.labels)
+                .map(([key, value]) => `<span class="alert-label-tag"><span class="key">${key}</span>=<span class="value">"${value}"</span></span>`)
+                .join('');
+        } else {
+            labelsContainer.innerHTML = '<span class="text-muted">No additional labels</span>';
+        }
+
+        // Show Grafana Panel
+        const grafanaPanel = document.getElementById('grafana-panel');
+        grafanaPanel.style.display = 'block';
+        document.getElementById('grafana-panel-title').textContent = `Real-time Metrics - ${alertData.instance || 'Server'}`;
+
+        // Show Query Card with PromQL
+        const queryCard = document.getElementById('query-card');
+        queryCard.style.display = 'block';
+        const promqlQuery = generatePromQLQuery(alertData);
+        document.getElementById('promql-query').innerHTML = promqlQuery;
+
+        // Show Detailed Metrics Card
+        renderDetailedMetrics(alertData, inc);
+
+        // Show Impact Analysis Card
+        renderImpactAnalysis(alertData, inc);
+
+        // Show StackStorm Automation Card
+        renderStackStormWorkflow(alertData, inc);
+
+        // Show Loki Logs Card
+        renderLokiLogs(alertData, inc);
     }
 
-    // Parse alert data from description
-    const alertData = parseAlertFromDescription(inc.description, inc.shortDescription);
+    function renderDetailedMetrics(alertData, inc) {
+        const metricsCard = document.getElementById('metrics-detail-card');
+        metricsCard.style.display = 'block';
 
-    // Show Auto-Creation Banner
-    const banner = document.getElementById('auto-creation-banner');
-    banner.style.display = 'flex';
-    document.getElementById('banner-title').textContent = `Incident Auto-Created from ${source}`;
-    document.getElementById('banner-created').textContent = `Created: ${formatDateTime(inc.createdAt)}`;
-    document.getElementById('banner-server').textContent = `Server: ${alertData.instance || 'Unknown'}`;
-    document.getElementById('banner-metric').textContent = `Alert: ${alertData.alertname || inc.shortDescription}`;
-    document.getElementById('banner-severity').textContent = `Severity: ${alertData.severity || 'warning'}`;
+        // Parse metrics from description or use defaults based on alert type
+        const metrics = parseMetricsFromDescription(inc.description, alertData);
 
-    // Update Grafana link
-    if (alertData.instance) {
-        const grafanaUrl = `https://fs-le-grafana.finspot.in/d/node-exporter/node-exporter?var-instance=${encodeURIComponent(alertData.instance)}`;
-        document.getElementById('grafana-link').href = grafanaUrl;
+        // CPU Usage
+        const cpuEl = document.getElementById('detail-cpu-usage');
+        cpuEl.textContent = metrics.cpuUsage || '91.2%';
+        cpuEl.parentElement.querySelector('.metric-detail-icon').className =
+            `metric-detail-icon ${parseFloat(metrics.cpuUsage) > 85 ? 'critical' : 'warning'}`;
+
+        // Load Average
+        document.getElementById('detail-load-avg').textContent = metrics.loadAverage || '8.45';
+
+        // Active Processes
+        document.getElementById('detail-processes').textContent = metrics.activeProcesses || '245';
+
+        // Memory Usage
+        document.getElementById('detail-memory').textContent = metrics.memoryUsage || '72.3%';
     }
 
-    // Show Metrics Grid
-    const metricsGrid = document.getElementById('metrics-grid');
-    metricsGrid.style.display = 'grid';
+    function renderImpactAnalysis(alertData, inc) {
+        const impactCard = document.getElementById('impact-card');
+        impactCard.style.display = 'block';
 
-    // Set metrics based on alert type
-    const primaryMetric = document.getElementById('metric-primary');
-    const primaryLabel = document.getElementById('metric-primary-label');
-    const primaryChange = document.getElementById('metric-primary-change');
+        // Parse impact data from description or use defaults
+        const impact = parseImpactFromDescription(inc.description, alertData);
 
-    if (alertData.alertname && alertData.alertname.toLowerCase().includes('cpu')) {
-        primaryMetric.textContent = alertData.value || '> 95%';
-        primaryMetric.className = 'metric-value critical';
-        primaryLabel.textContent = 'CPU Usage';
-        primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
-        primaryChange.className = 'metric-change up';
-    } else if (alertData.alertname && alertData.alertname.toLowerCase().includes('memory')) {
-        primaryMetric.textContent = alertData.value || '> 90%';
-        primaryMetric.className = 'metric-value warning';
-        primaryLabel.textContent = 'Memory Usage';
-        primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
-        primaryChange.className = 'metric-change up';
-    } else if (alertData.alertname && alertData.alertname.toLowerCase().includes('disk')) {
-        primaryMetric.textContent = alertData.value || '> 85%';
-        primaryMetric.className = 'metric-value warning';
-        primaryLabel.textContent = 'Disk Usage';
-        primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
-        primaryChange.className = 'metric-change up';
-    } else {
-        primaryMetric.textContent = alertData.severity === 'critical' ? 'CRITICAL' : 'WARNING';
-        primaryMetric.className = `metric-value ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
-        primaryLabel.textContent = 'Alert Status';
-        primaryChange.textContent = alertData.alertname || 'Active Alert';
+        // Set impact level badge
+        const impactBadge = document.getElementById('impact-level-badge');
+        impactBadge.textContent = impact.level || 'HIGH';
+        impactBadge.className = `impact-level-badge ${(impact.level || 'HIGH').toLowerCase()}`;
+
+        // API Response Time
+        document.getElementById('impact-response-time').textContent = impact.responseTime || '2.5s';
+        document.getElementById('impact-response-normal').textContent = impact.responseNormal || '(normal: 200ms)';
+
+        // Queue Depth
+        document.getElementById('impact-queue-depth').textContent = impact.queueDepth || '127';
+
+        // Error Rate
+        document.getElementById('impact-error-rate').textContent = impact.errorRate || '3.2%';
+
+        // Affected Users
+        document.getElementById('impact-affected-users').textContent = impact.affectedUsers || '~1,200';
     }
 
-    // Secondary metric: Instance
-    document.getElementById('metric-secondary').textContent = alertData.instance ? alertData.instance.split(':')[0] : '-';
-    document.getElementById('metric-secondary-label').textContent = 'Instance';
-    document.getElementById('metric-secondary-change').textContent = alertData.job || 'node_exporter';
+    function renderStackStormWorkflow(alertData, inc) {
+        const automationCard = document.getElementById('automation-card');
+        automationCard.style.display = 'block';
 
-    // Tertiary metric: Severity
-    const severityEl = document.getElementById('metric-tertiary');
-    severityEl.textContent = (alertData.severity || 'warning').toUpperCase();
-    severityEl.className = `metric-value ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
-    document.getElementById('metric-tertiary-label').textContent = 'Severity';
-
-    // Incident Age
-    const ageMs = Date.now() - new Date(inc.createdAt).getTime();
-    const ageMinutes = Math.floor(ageMs / 60000);
-    const ageHours = Math.floor(ageMinutes / 60);
-    document.getElementById('metric-age').textContent = ageHours > 0 ? `${ageHours}h ${ageMinutes % 60}m` : `${ageMinutes}m`;
-
-    // Show Alert Details Card
-    const alertCard = document.getElementById('alert-details-card');
-    alertCard.style.display = 'block';
-    document.getElementById('alert-source-badge').textContent = source;
-    document.getElementById('alert-name').textContent = alertData.alertname || inc.shortDescription;
-
-    const severityBadge = document.getElementById('alert-severity');
-    severityBadge.textContent = alertData.severity || 'warning';
-    severityBadge.className = `severity-badge ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
-
-    document.getElementById('alert-instance').textContent = alertData.instance || '-';
-    document.getElementById('alert-job').textContent = alertData.job || 'node_exporter';
-
-    // Render labels
-    const labelsContainer = document.getElementById('alert-labels');
-    if (alertData.labels && Object.keys(alertData.labels).length > 0) {
-        labelsContainer.innerHTML = Object.entries(alertData.labels)
-            .map(([key, value]) => `<span class="alert-label-tag"><span class="key">${key}</span>=<span class="value">"${value}"</span></span>`)
-            .join('');
-    } else {
-        labelsContainer.innerHTML = '<span class="text-muted">No additional labels</span>';
-    }
-
-    // Show Grafana Panel
-    const grafanaPanel = document.getElementById('grafana-panel');
-    grafanaPanel.style.display = 'block';
-    document.getElementById('grafana-panel-title').textContent = `Real-time Metrics - ${alertData.instance || 'Server'}`;
-
-    // Show Query Card with PromQL
-    const queryCard = document.getElementById('query-card');
-    queryCard.style.display = 'block';
-    const promqlQuery = generatePromQLQuery(alertData);
-    document.getElementById('promql-query').innerHTML = promqlQuery;
-
-    // Show Detailed Metrics Card
-    renderDetailedMetrics(alertData, inc);
-
-    // Show Impact Analysis Card
-    renderImpactAnalysis(alertData, inc);
-
-    // Show StackStorm Automation Card
-    renderStackStormWorkflow(alertData, inc);
-
-    // Show Loki Logs Card
-    renderLokiLogs(alertData, inc);
-}
-
-function renderDetailedMetrics(alertData, inc) {
-    const metricsCard = document.getElementById('metrics-detail-card');
-    metricsCard.style.display = 'block';
-
-    // Parse metrics from description or use defaults based on alert type
-    const metrics = parseMetricsFromDescription(inc.description, alertData);
-
-    // CPU Usage
-    const cpuEl = document.getElementById('detail-cpu-usage');
-    cpuEl.textContent = metrics.cpuUsage || '91.2%';
-    cpuEl.parentElement.querySelector('.metric-detail-icon').className =
-        `metric-detail-icon ${parseFloat(metrics.cpuUsage) > 85 ? 'critical' : 'warning'}`;
-
-    // Load Average
-    document.getElementById('detail-load-avg').textContent = metrics.loadAverage || '8.45';
-
-    // Active Processes
-    document.getElementById('detail-processes').textContent = metrics.activeProcesses || '245';
-
-    // Memory Usage
-    document.getElementById('detail-memory').textContent = metrics.memoryUsage || '72.3%';
-}
-
-function renderImpactAnalysis(alertData, inc) {
-    const impactCard = document.getElementById('impact-card');
-    impactCard.style.display = 'block';
-
-    // Parse impact data from description or use defaults
-    const impact = parseImpactFromDescription(inc.description, alertData);
-
-    // Set impact level badge
-    const impactBadge = document.getElementById('impact-level-badge');
-    impactBadge.textContent = impact.level || 'HIGH';
-    impactBadge.className = `impact-level-badge ${(impact.level || 'HIGH').toLowerCase()}`;
-
-    // API Response Time
-    document.getElementById('impact-response-time').textContent = impact.responseTime || '2.5s';
-    document.getElementById('impact-response-normal').textContent = impact.responseNormal || '(normal: 200ms)';
-
-    // Queue Depth
-    document.getElementById('impact-queue-depth').textContent = impact.queueDepth || '127';
-
-    // Error Rate
-    document.getElementById('impact-error-rate').textContent = impact.errorRate || '3.2%';
-
-    // Affected Users
-    document.getElementById('impact-affected-users').textContent = impact.affectedUsers || '~1,200';
-}
-
-function renderStackStormWorkflow(alertData, inc) {
-    const automationCard = document.getElementById('automation-card');
-    automationCard.style.display = 'block';
-
-    // Define workflow data based on alert type
-    const alertType = (alertData.alertname || '').toLowerCase();
-    let workflowConfig = {
-        name: 'generic_remediation',
-        flowSteps: [],
-        detailSteps: [],
-        successRate: '96%',
-        duration: '4.2s'
-    };
-
-    if (alertType.includes('cpu')) {
-        workflowConfig = {
-            name: 'cpu_high_remediation',
-            flowSteps: [
-                { num: 1, title: 'Detect', subtitle: 'CPU alert', status: 'completed' },
-                { num: 2, title: 'Create', subtitle: 'Incident', status: 'completed' },
-                { num: 3, title: 'Analyze', subtitle: 'Processes', status: 'completed' },
-                { num: 4, title: 'Notify', subtitle: 'On-call', status: 'completed' },
-                { num: 5, title: 'Scale', subtitle: 'Resources', status: 'in_progress' }
-            ],
-            detailSteps: [
-                { name: 'Trigger: HighCPUUsage Alert Received', status: 'completed', time: '0s', desc: 'Alert received from Prometheus Alertmanager' },
-                { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '1.2s', desc: 'INC-' + inc.number + ' created with P2 priority' },
-                { name: 'Action: Identify top CPU processes', status: 'completed', time: '2.5s', desc: 'Found: java (45.3%), node (23.1%)' },
-                { name: 'Action: Notify on-call via PagerDuty', status: 'completed', time: '3.1s', desc: 'Notification sent to DevOps team' },
-                { name: 'Action: Auto-scale deployment', status: 'in_progress', time: '4.2s', desc: 'Scaling replicas from 2 to 4...' },
-                { name: 'Action: Verify and close incident', status: 'pending', time: '-', desc: 'Waiting for scale completion' }
-            ],
-            successRate: '98%',
+        // Define workflow data based on alert type
+        const alertType = (alertData.alertname || '').toLowerCase();
+        let workflowConfig = {
+            name: 'generic_remediation',
+            flowSteps: [],
+            detailSteps: [],
+            successRate: '96%',
             duration: '4.2s'
         };
-    } else if (alertType.includes('memory')) {
-        workflowConfig = {
-            name: 'memory_high_remediation',
-            flowSteps: [
-                { num: 1, title: 'Detect', subtitle: 'Memory alert', status: 'completed' },
-                { num: 2, title: 'Create', subtitle: 'Incident', status: 'completed' },
-                { num: 3, title: 'Analyze', subtitle: 'Memory', status: 'completed' },
-                { num: 4, title: 'Restart', subtitle: 'Services', status: 'in_progress' },
-                { num: 5, title: 'Verify', subtitle: 'Health', status: 'pending' }
-            ],
-            detailSteps: [
-                { name: 'Trigger: HighMemoryUsage Alert', status: 'completed', time: '0s', desc: 'Memory usage exceeded 90% threshold' },
-                { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '1.0s', desc: 'Critical incident created' },
-                { name: 'Action: Capture memory analysis', status: 'completed', time: '3.2s', desc: 'Top consumer: postgres (8.4GB)' },
-                { name: 'Action: Restart memory-leaking services', status: 'in_progress', time: '5.5s', desc: 'Graceful restart in progress...' },
-                { name: 'Action: Verify system health', status: 'pending', time: '-', desc: 'Awaiting restart completion' }
-            ],
-            successRate: '95%',
-            duration: '5.5s'
-        };
-    } else if (alertType.includes('disk')) {
-        workflowConfig = {
-            name: 'disk_cleanup_workflow',
-            flowSteps: [
-                { num: 1, title: 'Detect', subtitle: 'Disk alert', status: 'completed' },
-                { num: 2, title: 'Analyze', subtitle: 'Usage', status: 'completed' },
-                { num: 3, title: 'Cleanup', subtitle: 'Logs', status: 'completed' },
-                { num: 4, title: 'Create', subtitle: 'Incident', status: 'completed' },
-                { num: 5, title: 'Notify', subtitle: 'Admin', status: 'completed' }
-            ],
-            detailSteps: [
-                { name: 'Trigger: LowDiskSpace Alert', status: 'completed', time: '0s', desc: '/var partition 92% full' },
-                { name: 'Action: Analyze disk usage', status: 'completed', time: '1.5s', desc: 'Identified /var/log (45GB)' },
-                { name: 'Action: Cleanup old log files', status: 'completed', time: '4.8s', desc: 'Removed 12GB of rotated logs' },
-                { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '5.2s', desc: 'Warning incident created' },
-                { name: 'Action: Send capacity report', status: 'completed', time: '5.8s', desc: 'Report sent to admin team' }
-            ],
-            successRate: '92%',
-            duration: '5.8s'
-        };
-    } else {
-        workflowConfig = {
-            name: 'generic_alert_handler',
-            flowSteps: [
-                { num: 1, title: 'Receive', subtitle: 'Alert', status: 'completed' },
-                { num: 2, title: 'Parse', subtitle: 'Labels', status: 'completed' },
-                { num: 3, title: 'Create', subtitle: 'Incident', status: 'completed' },
-                { num: 4, title: 'Assign', subtitle: 'Team', status: 'completed' },
-                { num: 5, title: 'Notify', subtitle: 'On-call', status: 'completed' }
-            ],
-            detailSteps: [
-                { name: 'Trigger: Alert Received', status: 'completed', time: '0s', desc: 'From Prometheus Alertmanager' },
-                { name: 'Action: Parse alert data', status: 'completed', time: '0.5s', desc: 'Labels and annotations extracted' },
-                { name: 'Action: Create incident', status: 'completed', time: '1.2s', desc: 'Incident created in LinkedEye' },
-                { name: 'Action: Assign to team', status: 'completed', time: '1.8s', desc: 'Assigned to Infrastructure team' },
-                { name: 'Action: Send notification', status: 'completed', time: '2.3s', desc: 'On-call engineer notified' }
-            ],
-            successRate: '96%',
-            duration: '2.3s'
-        };
-    }
 
-    // Generate workflow ID
-    const workflowId = `WF-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+        if (alertType.includes('cpu')) {
+            workflowConfig = {
+                name: 'cpu_high_remediation',
+                flowSteps: [
+                    { num: 1, title: 'Detect', subtitle: 'CPU alert', status: 'completed' },
+                    { num: 2, title: 'Create', subtitle: 'Incident', status: 'completed' },
+                    { num: 3, title: 'Analyze', subtitle: 'Processes', status: 'completed' },
+                    { num: 4, title: 'Notify', subtitle: 'On-call', status: 'completed' },
+                    { num: 5, title: 'Scale', subtitle: 'Resources', status: 'in_progress' }
+                ],
+                detailSteps: [
+                    { name: 'Trigger: HighCPUUsage Alert Received', status: 'completed', time: '0s', desc: 'Alert received from Prometheus Alertmanager' },
+                    { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '1.2s', desc: 'INC-' + inc.number + ' created with P2 priority' },
+                    { name: 'Action: Identify top CPU processes', status: 'completed', time: '2.5s', desc: 'Found: java (45.3%), node (23.1%)' },
+                    { name: 'Action: Notify on-call via PagerDuty', status: 'completed', time: '3.1s', desc: 'Notification sent to DevOps team' },
+                    { name: 'Action: Auto-scale deployment', status: 'in_progress', time: '4.2s', desc: 'Scaling replicas from 2 to 4...' },
+                    { name: 'Action: Verify and close incident', status: 'pending', time: '-', desc: 'Waiting for scale completion' }
+                ],
+                successRate: '98%',
+                duration: '4.2s'
+            };
+        } else if (alertType.includes('memory')) {
+            workflowConfig = {
+                name: 'memory_high_remediation',
+                flowSteps: [
+                    { num: 1, title: 'Detect', subtitle: 'Memory alert', status: 'completed' },
+                    { num: 2, title: 'Create', subtitle: 'Incident', status: 'completed' },
+                    { num: 3, title: 'Analyze', subtitle: 'Memory', status: 'completed' },
+                    { num: 4, title: 'Restart', subtitle: 'Services', status: 'in_progress' },
+                    { num: 5, title: 'Verify', subtitle: 'Health', status: 'pending' }
+                ],
+                detailSteps: [
+                    { name: 'Trigger: HighMemoryUsage Alert', status: 'completed', time: '0s', desc: 'Memory usage exceeded 90% threshold' },
+                    { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '1.0s', desc: 'Critical incident created' },
+                    { name: 'Action: Capture memory analysis', status: 'completed', time: '3.2s', desc: 'Top consumer: postgres (8.4GB)' },
+                    { name: 'Action: Restart memory-leaking services', status: 'in_progress', time: '5.5s', desc: 'Graceful restart in progress...' },
+                    { name: 'Action: Verify system health', status: 'pending', time: '-', desc: 'Awaiting restart completion' }
+                ],
+                successRate: '95%',
+                duration: '5.5s'
+            };
+        } else if (alertType.includes('disk')) {
+            workflowConfig = {
+                name: 'disk_cleanup_workflow',
+                flowSteps: [
+                    { num: 1, title: 'Detect', subtitle: 'Disk alert', status: 'completed' },
+                    { num: 2, title: 'Analyze', subtitle: 'Usage', status: 'completed' },
+                    { num: 3, title: 'Cleanup', subtitle: 'Logs', status: 'completed' },
+                    { num: 4, title: 'Create', subtitle: 'Incident', status: 'completed' },
+                    { num: 5, title: 'Notify', subtitle: 'Admin', status: 'completed' }
+                ],
+                detailSteps: [
+                    { name: 'Trigger: LowDiskSpace Alert', status: 'completed', time: '0s', desc: '/var partition 92% full' },
+                    { name: 'Action: Analyze disk usage', status: 'completed', time: '1.5s', desc: 'Identified /var/log (45GB)' },
+                    { name: 'Action: Cleanup old log files', status: 'completed', time: '4.8s', desc: 'Removed 12GB of rotated logs' },
+                    { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '5.2s', desc: 'Warning incident created' },
+                    { name: 'Action: Send capacity report', status: 'completed', time: '5.8s', desc: 'Report sent to admin team' }
+                ],
+                successRate: '92%',
+                duration: '5.8s'
+            };
+        } else {
+            workflowConfig = {
+                name: 'generic_alert_handler',
+                flowSteps: [
+                    { num: 1, title: 'Receive', subtitle: 'Alert', status: 'completed' },
+                    { num: 2, title: 'Parse', subtitle: 'Labels', status: 'completed' },
+                    { num: 3, title: 'Create', subtitle: 'Incident', status: 'completed' },
+                    { num: 4, title: 'Assign', subtitle: 'Team', status: 'completed' },
+                    { num: 5, title: 'Notify', subtitle: 'On-call', status: 'completed' }
+                ],
+                detailSteps: [
+                    { name: 'Trigger: Alert Received', status: 'completed', time: '0s', desc: 'From Prometheus Alertmanager' },
+                    { name: 'Action: Parse alert data', status: 'completed', time: '0.5s', desc: 'Labels and annotations extracted' },
+                    { name: 'Action: Create incident', status: 'completed', time: '1.2s', desc: 'Incident created in LinkedEye' },
+                    { name: 'Action: Assign to team', status: 'completed', time: '1.8s', desc: 'Assigned to Infrastructure team' },
+                    { name: 'Action: Send notification', status: 'completed', time: '2.3s', desc: 'On-call engineer notified' }
+                ],
+                successRate: '96%',
+                duration: '2.3s'
+            };
+        }
 
-    // Update header info
-    document.getElementById('workflow-name').textContent = workflowConfig.name;
-    document.getElementById('workflow-id').textContent = workflowId;
-    document.getElementById('workflow-duration').textContent = `Duration: ${workflowConfig.duration}`;
-    document.getElementById('workflow-success-rate').textContent = `Success Rate: ${workflowConfig.successRate}`;
+        // Generate workflow ID
+        const workflowId = `WF-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
 
-    // Update status badge
-    const statusBadge = document.getElementById('workflow-status-badge');
-    const hasInProgress = workflowConfig.flowSteps.some(s => s.status === 'in_progress');
-    const allCompleted = workflowConfig.flowSteps.every(s => s.status === 'completed');
+        // Update header info
+        document.getElementById('workflow-name').textContent = workflowConfig.name;
+        document.getElementById('workflow-id').textContent = workflowId;
+        document.getElementById('workflow-duration').textContent = `Duration: ${workflowConfig.duration}`;
+        document.getElementById('workflow-success-rate').textContent = `Success Rate: ${workflowConfig.successRate}`;
 
-    if (allCompleted) {
-        statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Completed';
-        statusBadge.classList.add('completed');
-    } else if (hasInProgress) {
-        statusBadge.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running';
-    } else {
-        statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
-    }
+        // Update status badge
+        const statusBadge = document.getElementById('workflow-status-badge');
+        const hasInProgress = workflowConfig.flowSteps.some(s => s.status === 'in_progress');
+        const allCompleted = workflowConfig.flowSteps.every(s => s.status === 'completed');
 
-    // Render flow diagram
-    const flowContainer = document.getElementById('workflow-flow');
-    let flowHTML = '';
-    workflowConfig.flowSteps.forEach((step, index) => {
-        flowHTML += `
+        if (allCompleted) {
+            statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Completed';
+            statusBadge.classList.add('completed');
+        } else if (hasInProgress) {
+            statusBadge.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running';
+        } else {
+            statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
+        }
+
+        // Render flow diagram
+        const flowContainer = document.getElementById('workflow-flow');
+        let flowHTML = '';
+        workflowConfig.flowSteps.forEach((step, index) => {
+            flowHTML += `
             <div class="flow-step ${step.status}">
                 <div class="flow-step-number">${step.num}</div>
                 <div class="flow-step-title">${step.title}</div>
                 <div class="flow-step-subtitle">${step.subtitle}</div>
             </div>
         `;
-        if (index < workflowConfig.flowSteps.length - 1) {
-            const arrowClass = step.status === 'completed' ? 'completed' : '';
-            flowHTML += `<div class="flow-arrow ${arrowClass}">→</div>`;
-        }
-    });
-    flowContainer.innerHTML = flowHTML;
+            if (index < workflowConfig.flowSteps.length - 1) {
+                const arrowClass = step.status === 'completed' ? 'completed' : '';
+                flowHTML += `<div class="flow-arrow ${arrowClass}">→</div>`;
+            }
+        });
+        flowContainer.innerHTML = flowHTML;
 
-    // Render detailed steps
-    const stepsContainer = document.getElementById('automation-steps');
-    stepsContainer.innerHTML = workflowConfig.detailSteps.map((step) => `
+        // Render detailed steps
+        const stepsContainer = document.getElementById('automation-steps');
+        stepsContainer.innerHTML = workflowConfig.detailSteps.map((step) => `
         <div class="workflow-step ${step.status}">
             <div class="step-indicator">
                 ${step.status === 'completed' ? '<i class="fas fa-check-circle" style="color: #28a745;"></i>' :
-                  step.status === 'in_progress' ? '<i class="fas fa-spinner fa-spin" style="color: #0099ff;"></i>' :
-                  '<i class="fas fa-circle" style="color: #adb5bd;"></i>'}
+                step.status === 'in_progress' ? '<i class="fas fa-spinner fa-spin" style="color: #0099ff;"></i>' :
+                    '<i class="fas fa-circle" style="color: #adb5bd;"></i>'}
             </div>
             <div class="step-content">
                 <span class="step-name">${step.name}</span>
@@ -1181,341 +1225,341 @@ function renderStackStormWorkflow(alertData, inc) {
             </div>
         </div>
     `).join('');
-}
-
-function renderLokiLogs(alertData, inc) {
-    const lokiCard = document.getElementById('loki-logs-card');
-    lokiCard.style.display = 'block';
-
-    // Update Loki query based on instance
-    const instance = alertData.instance || 'localhost';
-    const hostname = instance.split(':')[0];
-    document.getElementById('loki-query').textContent = `{job="syslog", host="${hostname}"}`;
-    document.getElementById('loki-title').textContent = `Live System Logs - ${hostname}`;
-
-    // Generate sample log entries based on alert type
-    const alertType = (alertData.alertname || '').toLowerCase();
-    const now = new Date();
-    let logs = [];
-
-    if (alertType.includes('cpu')) {
-        logs = [
-            { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] CPU usage critical: 91.2% - threshold exceeded` },
-            { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Process 'java' consuming 45.3% CPU (PID: 12847)` },
-            { time: formatLogTime(now, -3), level: 'warn', message: `[${hostname}] Process 'node' consuming 23.1% CPU (PID: 8234)` },
-            { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Load average: 8.45, 7.23, 5.89 (1m, 5m, 15m)` },
-            { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Active processes: 245, Threads: 1847` },
-            { time: formatLogTime(now, 0), level: 'warn', message: `[${hostname}] Alert sent to Prometheus Alertmanager` }
-        ];
-    } else if (alertType.includes('memory')) {
-        logs = [
-            { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Memory usage critical: 94.7% used` },
-            { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Available memory: 1.2GB / 32GB` },
-            { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Swap usage: 45.2% (7.2GB / 16GB)` },
-            { time: formatLogTime(now, -2), level: 'warn', message: `[${hostname}] OOM killer may activate soon` },
-            { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Top memory consumer: postgres (8.4GB)` }
-        ];
-    } else if (alertType.includes('disk')) {
-        logs = [
-            { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Disk space critical: /var 92% full` },
-            { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Available space: 8.2GB / 100GB on /var` },
-            { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Largest directory: /var/log (45GB)` },
-            { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Log rotation initiated` },
-            { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Cleaned up 12GB of old logs` }
-        ];
-    } else {
-        logs = [
-            { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Alert triggered: ${alertData.alertname || 'Unknown'}` },
-            { time: formatLogTime(now, -4), level: 'info', message: `[${hostname}] Severity: ${alertData.severity || 'warning'}` },
-            { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Job: ${alertData.job || 'node_exporter'}` },
-            { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Incident created in LinkedEye ITSM` },
-            { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] On-call team notified` }
-        ];
     }
 
-    // Render log entries
-    const logsContainer = document.getElementById('logs-container');
-    logsContainer.innerHTML = logs.map(log => `
+    function renderLokiLogs(alertData, inc) {
+        const lokiCard = document.getElementById('loki-logs-card');
+        lokiCard.style.display = 'block';
+
+        // Update Loki query based on instance
+        const instance = alertData.instance || 'localhost';
+        const hostname = instance.split(':')[0];
+        document.getElementById('loki-query').textContent = `{job="syslog", host="${hostname}"}`;
+        document.getElementById('loki-title').textContent = `Live System Logs - ${hostname}`;
+
+        // Generate sample log entries based on alert type
+        const alertType = (alertData.alertname || '').toLowerCase();
+        const now = new Date();
+        let logs = [];
+
+        if (alertType.includes('cpu')) {
+            logs = [
+                { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] CPU usage critical: 91.2% - threshold exceeded` },
+                { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Process 'java' consuming 45.3% CPU (PID: 12847)` },
+                { time: formatLogTime(now, -3), level: 'warn', message: `[${hostname}] Process 'node' consuming 23.1% CPU (PID: 8234)` },
+                { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Load average: 8.45, 7.23, 5.89 (1m, 5m, 15m)` },
+                { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Active processes: 245, Threads: 1847` },
+                { time: formatLogTime(now, 0), level: 'warn', message: `[${hostname}] Alert sent to Prometheus Alertmanager` }
+            ];
+        } else if (alertType.includes('memory')) {
+            logs = [
+                { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Memory usage critical: 94.7% used` },
+                { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Available memory: 1.2GB / 32GB` },
+                { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Swap usage: 45.2% (7.2GB / 16GB)` },
+                { time: formatLogTime(now, -2), level: 'warn', message: `[${hostname}] OOM killer may activate soon` },
+                { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Top memory consumer: postgres (8.4GB)` }
+            ];
+        } else if (alertType.includes('disk')) {
+            logs = [
+                { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Disk space critical: /var 92% full` },
+                { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Available space: 8.2GB / 100GB on /var` },
+                { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Largest directory: /var/log (45GB)` },
+                { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Log rotation initiated` },
+                { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Cleaned up 12GB of old logs` }
+            ];
+        } else {
+            logs = [
+                { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Alert triggered: ${alertData.alertname || 'Unknown'}` },
+                { time: formatLogTime(now, -4), level: 'info', message: `[${hostname}] Severity: ${alertData.severity || 'warning'}` },
+                { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Job: ${alertData.job || 'node_exporter'}` },
+                { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Incident created in LinkedEye ITSM` },
+                { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] On-call team notified` }
+            ];
+        }
+
+        // Render log entries
+        const logsContainer = document.getElementById('logs-container');
+        logsContainer.innerHTML = logs.map(log => `
         <div class="log-entry">
             <span class="log-timestamp">${log.time}</span>
             <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
             <span class="log-message">${log.message}</span>
         </div>
     `).join('');
-}
-
-function formatLogTime(date, minutesOffset) {
-    const d = new Date(date.getTime() + minutesOffset * 60000);
-    return d.toISOString().replace('T', ' ').slice(0, 23);
-}
-
-function parseMetricsFromDescription(description, alertData) {
-    const metrics = {
-        cpuUsage: '91.2%',
-        loadAverage: '8.45',
-        activeProcesses: '245',
-        memoryUsage: '72.3%'
-    };
-
-    if (!description) return metrics;
-
-    // Try to extract CPU usage
-    const cpuMatch = description.match(/CPU[:\s]+(\d+\.?\d*)\s*%/i);
-    if (cpuMatch) metrics.cpuUsage = cpuMatch[1] + '%';
-
-    // Try to extract Load Average
-    const loadMatch = description.match(/Load\s*Average[:\s]+(\d+\.?\d*)/i);
-    if (loadMatch) metrics.loadAverage = loadMatch[1];
-
-    // Try to extract Processes
-    const processMatch = description.match(/Processes[:\s]+(\d+)/i);
-    if (processMatch) metrics.activeProcesses = processMatch[1];
-
-    // Try to extract Memory
-    const memMatch = description.match(/Memory[:\s]+(\d+\.?\d*)\s*%/i);
-    if (memMatch) metrics.memoryUsage = memMatch[1] + '%';
-
-    return metrics;
-}
-
-function parseImpactFromDescription(description, alertData) {
-    const impact = {
-        level: 'HIGH',
-        responseTime: '2.5s',
-        responseNormal: '(normal: 200ms)',
-        queueDepth: '127',
-        errorRate: '3.2%',
-        affectedUsers: '~1,200'
-    };
-
-    if (!description) return impact;
-
-    // Determine impact level based on severity
-    if (alertData.severity === 'critical') {
-        impact.level = 'CRITICAL';
-    } else if (alertData.severity === 'warning') {
-        impact.level = 'HIGH';
     }
 
-    // Try to extract response time
-    const respMatch = description.match(/response\s*time[:\s]+(\d+\.?\d*)\s*(ms|s)/i);
-    if (respMatch) {
-        impact.responseTime = respMatch[1] + respMatch[2];
+    function formatLogTime(date, minutesOffset) {
+        const d = new Date(date.getTime() + minutesOffset * 60000);
+        return d.toISOString().replace('T', ' ').slice(0, 23);
     }
 
-    // Try to extract error rate
-    const errorMatch = description.match(/error\s*rate[:\s]+(\d+\.?\d*)\s*%/i);
-    if (errorMatch) {
-        impact.errorRate = errorMatch[1] + '%';
+    function parseMetricsFromDescription(description, alertData) {
+        const metrics = {
+            cpuUsage: '91.2%',
+            loadAverage: '8.45',
+            activeProcesses: '245',
+            memoryUsage: '72.3%'
+        };
+
+        if (!description) return metrics;
+
+        // Try to extract CPU usage
+        const cpuMatch = description.match(/CPU[:\s]+(\d+\.?\d*)\s*%/i);
+        if (cpuMatch) metrics.cpuUsage = cpuMatch[1] + '%';
+
+        // Try to extract Load Average
+        const loadMatch = description.match(/Load\s*Average[:\s]+(\d+\.?\d*)/i);
+        if (loadMatch) metrics.loadAverage = loadMatch[1];
+
+        // Try to extract Processes
+        const processMatch = description.match(/Processes[:\s]+(\d+)/i);
+        if (processMatch) metrics.activeProcesses = processMatch[1];
+
+        // Try to extract Memory
+        const memMatch = description.match(/Memory[:\s]+(\d+\.?\d*)\s*%/i);
+        if (memMatch) metrics.memoryUsage = memMatch[1] + '%';
+
+        return metrics;
     }
 
-    // Try to extract queue depth
-    const queueMatch = description.match(/queue\s*(depth)?[:\s]+(\d+)/i);
-    if (queueMatch) {
-        impact.queueDepth = queueMatch[2];
-    }
+    function parseImpactFromDescription(description, alertData) {
+        const impact = {
+            level: 'HIGH',
+            responseTime: '2.5s',
+            responseNormal: '(normal: 200ms)',
+            queueDepth: '127',
+            errorRate: '3.2%',
+            affectedUsers: '~1,200'
+        };
 
-    return impact;
-}
+        if (!description) return impact;
 
-function parseAlertFromDescription(description, shortDescription) {
-    const alertData = {
-        alertname: '',
-        severity: 'warning',
-        instance: '',
-        job: '',
-        value: '',
-        labels: {}
-    };
-
-    if (!description) return alertData;
-
-    // Try to parse alertname from short description
-    const alertMatch = shortDescription?.match(/^([A-Za-z]+)\s*-\s*(.+)/);
-    if (alertMatch) {
-        alertData.alertname = alertMatch[1];
-        alertData.instance = alertMatch[2];
-    }
-
-    // Parse from description text
-    const lines = description.split('\n');
-    for (const line of lines) {
-        const trimmedLine = line.trim();
-
-        // Match "key": "value" patterns
-        const jsonMatch = trimmedLine.match(/"([^"]+)":\s*"([^"]+)"/);
-        if (jsonMatch) {
-            const [, key, value] = jsonMatch;
-            if (key === 'alertname') alertData.alertname = value;
-            else if (key === 'severity') alertData.severity = value;
-            else if (key === 'instance') alertData.instance = value;
-            else if (key === 'job') alertData.job = value;
-            else alertData.labels[key] = value;
+        // Determine impact level based on severity
+        if (alertData.severity === 'critical') {
+            impact.level = 'CRITICAL';
+        } else if (alertData.severity === 'warning') {
+            impact.level = 'HIGH';
         }
 
-        // Match Labels: { pattern
-        if (trimmedLine.toLowerCase().startsWith('labels:')) {
-            continue; // Skip the labels header
+        // Try to extract response time
+        const respMatch = description.match(/response\s*time[:\s]+(\d+\.?\d*)\s*(ms|s)/i);
+        if (respMatch) {
+            impact.responseTime = respMatch[1] + respMatch[2];
+        }
+
+        // Try to extract error rate
+        const errorMatch = description.match(/error\s*rate[:\s]+(\d+\.?\d*)\s*%/i);
+        if (errorMatch) {
+            impact.errorRate = errorMatch[1] + '%';
+        }
+
+        // Try to extract queue depth
+        const queueMatch = description.match(/queue\s*(depth)?[:\s]+(\d+)/i);
+        if (queueMatch) {
+            impact.queueDepth = queueMatch[2];
+        }
+
+        return impact;
+    }
+
+    function parseAlertFromDescription(description, shortDescription) {
+        const alertData = {
+            alertname: '',
+            severity: 'warning',
+            instance: '',
+            job: '',
+            value: '',
+            labels: {}
+        };
+
+        if (!description) return alertData;
+
+        // Try to parse alertname from short description
+        const alertMatch = shortDescription?.match(/^([A-Za-z]+)\s*-\s*(.+)/);
+        if (alertMatch) {
+            alertData.alertname = alertMatch[1];
+            alertData.instance = alertMatch[2];
+        }
+
+        // Parse from description text
+        const lines = description.split('\n');
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+
+            // Match "key": "value" patterns
+            const jsonMatch = trimmedLine.match(/"([^"]+)":\s*"([^"]+)"/);
+            if (jsonMatch) {
+                const [, key, value] = jsonMatch;
+                if (key === 'alertname') alertData.alertname = value;
+                else if (key === 'severity') alertData.severity = value;
+                else if (key === 'instance') alertData.instance = value;
+                else if (key === 'job') alertData.job = value;
+                else alertData.labels[key] = value;
+            }
+
+            // Match Labels: { pattern
+            if (trimmedLine.toLowerCase().startsWith('labels:')) {
+                continue; // Skip the labels header
+            }
+        }
+
+        // Extract from JSON-like structure in description
+        try {
+            const jsonMatch = description.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                // Clean up the JSON string
+                let jsonStr = jsonMatch[0]
+                    .replace(/\n/g, '')
+                    .replace(/,\s*}/g, '}')
+                    .replace(/([{,])\s*"?(\w+)"?\s*:/g, '$1"$2":');
+
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.alertname) alertData.alertname = parsed.alertname;
+                if (parsed.severity) alertData.severity = parsed.severity;
+                if (parsed.instance) alertData.instance = parsed.instance;
+                if (parsed.job) alertData.job = parsed.job;
+
+                // Copy remaining as labels
+                Object.keys(parsed).forEach(key => {
+                    if (!['alertname', 'severity', 'instance', 'job'].includes(key)) {
+                        alertData.labels[key] = parsed[key];
+                    }
+                });
+            }
+        } catch (e) {
+            // JSON parsing failed, continue with regex results
+        }
+
+        return alertData;
+    }
+
+    function generatePromQLQuery(alertData) {
+        const metric = alertData.alertname?.toLowerCase().includes('cpu') ? 'node_cpu_seconds_total' :
+            alertData.alertname?.toLowerCase().includes('memory') ? 'node_memory_MemAvailable_bytes' :
+                alertData.alertname?.toLowerCase().includes('disk') ? 'node_filesystem_avail_bytes' :
+                    'up';
+
+        const instance = alertData.instance || 'localhost:9100';
+
+        return `<span class="metric">${metric}</span><span class="operator">{</span><span class="label-key">instance</span><span class="operator">=</span><span class="string">"${instance}"</span><span class="operator">}</span>`;
+    }
+
+    function updateStatusBanner(inc) {
+        const banner = document.getElementById('status-banner');
+        const indicator = document.getElementById('status-indicator');
+        const text = document.getElementById('status-text');
+
+        const stateConfig = {
+            'NEW': { class: 'status-new', text: 'New - Awaiting Assignment', icon: 'fas fa-plus-circle' },
+            'IN_PROGRESS': { class: 'status-in-progress', text: 'In Progress', icon: 'fas fa-spinner fa-pulse' },
+            'ON_HOLD': { class: 'status-on-hold', text: 'On Hold', icon: 'fas fa-pause-circle' },
+            'RESOLVED': { class: 'status-resolved', text: 'Resolved', icon: 'fas fa-check-circle' },
+            'CLOSED': { class: 'status-closed', text: 'Closed', icon: 'fas fa-times-circle' },
+            'CANCELLED': { class: 'status-cancelled', text: 'Cancelled', icon: 'fas fa-ban' }
+        };
+
+        const config = stateConfig[inc.state] || stateConfig['NEW'];
+        banner.className = `status-banner ${config.class}`;
+        indicator.innerHTML = `<i class="${config.icon}"></i>`;
+        text.textContent = config.text;
+
+        // Update SLA timer
+        updateSLATimer(inc);
+    }
+
+    function updateSLATimer(inc) {
+        const timerEl = document.getElementById('sla-time');
+
+        if (!inc.slaTargetResolution || inc.state === 'RESOLVED' || inc.state === 'CLOSED') {
+            timerEl.textContent = '--:--:--';
+            return;
+        }
+
+        const target = new Date(inc.slaTargetResolution);
+        const now = new Date();
+        const diff = target - now;
+
+        if (diff < 0) {
+            const absDiff = Math.abs(diff);
+            const hours = Math.floor(absDiff / 3600000);
+            const mins = Math.floor((absDiff % 3600000) / 60000);
+            timerEl.textContent = `-${hours}:${mins.toString().padStart(2, '0')} (Breached)`;
+            timerEl.classList.add('breached');
+        } else {
+            const hours = Math.floor(diff / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            timerEl.textContent = `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            timerEl.classList.remove('breached');
         }
     }
 
-    // Extract from JSON-like structure in description
-    try {
-        const jsonMatch = description.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            // Clean up the JSON string
-            let jsonStr = jsonMatch[0]
-                .replace(/\n/g, '')
-                .replace(/,\s*}/g, '}')
-                .replace(/([{,])\s*"?(\w+)"?\s*:/g, '$1"$2":');
+    function renderSLA(inc) {
+        // Response SLA
+        const responseEl = document.getElementById('sla-response');
+        if (inc.responseTime) {
+            responseEl.querySelector('.sla-fill').style.width = '100%';
+            responseEl.querySelector('.sla-fill').classList.add('completed');
+            responseEl.querySelector('.sla-status').textContent = 'Met';
+        } else if (inc.slaTargetResponse) {
+            const progress = calculateSLAProgress(inc.createdAt, inc.slaTargetResponse);
+            responseEl.querySelector('.sla-fill').style.width = Math.min(progress, 100) + '%';
+            responseEl.querySelector('.sla-fill').classList.toggle('warning', progress > 70);
+            responseEl.querySelector('.sla-fill').classList.toggle('critical', progress > 90);
+            responseEl.querySelector('.sla-status').textContent = progress >= 100 ? 'Breached' : Math.round(100 - progress) + '% remaining';
+        }
 
-            const parsed = JSON.parse(jsonStr);
-            if (parsed.alertname) alertData.alertname = parsed.alertname;
-            if (parsed.severity) alertData.severity = parsed.severity;
-            if (parsed.instance) alertData.instance = parsed.instance;
-            if (parsed.job) alertData.job = parsed.job;
+        // Resolution SLA
+        const resolutionEl = document.getElementById('sla-resolution');
+        if (inc.resolvedAt) {
+            resolutionEl.querySelector('.sla-fill').style.width = '100%';
+            resolutionEl.querySelector('.sla-fill').classList.add('completed');
+            resolutionEl.querySelector('.sla-status').textContent = 'Met';
+        } else if (inc.slaTargetResolution) {
+            const progress = calculateSLAProgress(inc.createdAt, inc.slaTargetResolution);
+            resolutionEl.querySelector('.sla-fill').style.width = Math.min(progress, 100) + '%';
+            resolutionEl.querySelector('.sla-fill').classList.toggle('warning', progress > 70);
+            resolutionEl.querySelector('.sla-fill').classList.toggle('critical', progress > 90);
+            resolutionEl.querySelector('.sla-status').textContent = progress >= 100 ? 'Breached' : Math.round(100 - progress) + '% remaining';
+        }
+    }
 
-            // Copy remaining as labels
-            Object.keys(parsed).forEach(key => {
-                if (!['alertname', 'severity', 'instance', 'job'].includes(key)) {
-                    alertData.labels[key] = parsed[key];
+    function calculateSLAProgress(start, target) {
+        const startDate = new Date(start);
+        const targetDate = new Date(target);
+        const now = new Date();
+        const total = targetDate - startDate;
+        const elapsed = now - startDate;
+        return (elapsed / total) * 100;
+    }
+
+    async function loadNotes() {
+        try {
+            const response = await fetch(`/api/proxy/incidents/${incidentId}/notes`, {
+                headers: {
+                    'Authorization': 'Bearer ' + getToken()
                 }
             });
-        }
-    } catch (e) {
-        // JSON parsing failed, continue with regex results
-    }
 
-    return alertData;
-}
+            const data = await response.json();
 
-function generatePromQLQuery(alertData) {
-    const metric = alertData.alertname?.toLowerCase().includes('cpu') ? 'node_cpu_seconds_total' :
-                   alertData.alertname?.toLowerCase().includes('memory') ? 'node_memory_MemAvailable_bytes' :
-                   alertData.alertname?.toLowerCase().includes('disk') ? 'node_filesystem_avail_bytes' :
-                   'up';
-
-    const instance = alertData.instance || 'localhost:9100';
-
-    return `<span class="metric">${metric}</span><span class="operator">{</span><span class="label-key">instance</span><span class="operator">=</span><span class="string">"${instance}"</span><span class="operator">}</span>`;
-}
-
-function updateStatusBanner(inc) {
-    const banner = document.getElementById('status-banner');
-    const indicator = document.getElementById('status-indicator');
-    const text = document.getElementById('status-text');
-
-    const stateConfig = {
-        'NEW': { class: 'status-new', text: 'New - Awaiting Assignment', icon: 'fas fa-plus-circle' },
-        'IN_PROGRESS': { class: 'status-in-progress', text: 'In Progress', icon: 'fas fa-spinner fa-pulse' },
-        'ON_HOLD': { class: 'status-on-hold', text: 'On Hold', icon: 'fas fa-pause-circle' },
-        'RESOLVED': { class: 'status-resolved', text: 'Resolved', icon: 'fas fa-check-circle' },
-        'CLOSED': { class: 'status-closed', text: 'Closed', icon: 'fas fa-times-circle' },
-        'CANCELLED': { class: 'status-cancelled', text: 'Cancelled', icon: 'fas fa-ban' }
-    };
-
-    const config = stateConfig[inc.state] || stateConfig['NEW'];
-    banner.className = `status-banner ${config.class}`;
-    indicator.innerHTML = `<i class="${config.icon}"></i>`;
-    text.textContent = config.text;
-
-    // Update SLA timer
-    updateSLATimer(inc);
-}
-
-function updateSLATimer(inc) {
-    const timerEl = document.getElementById('sla-time');
-
-    if (!inc.slaTargetResolution || inc.state === 'RESOLVED' || inc.state === 'CLOSED') {
-        timerEl.textContent = '--:--:--';
-        return;
-    }
-
-    const target = new Date(inc.slaTargetResolution);
-    const now = new Date();
-    const diff = target - now;
-
-    if (diff < 0) {
-        const absDiff = Math.abs(diff);
-        const hours = Math.floor(absDiff / 3600000);
-        const mins = Math.floor((absDiff % 3600000) / 60000);
-        timerEl.textContent = `-${hours}:${mins.toString().padStart(2, '0')} (Breached)`;
-        timerEl.classList.add('breached');
-    } else {
-        const hours = Math.floor(diff / 3600000);
-        const mins = Math.floor((diff % 3600000) / 60000);
-        const secs = Math.floor((diff % 60000) / 1000);
-        timerEl.textContent = `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        timerEl.classList.remove('breached');
-    }
-}
-
-function renderSLA(inc) {
-    // Response SLA
-    const responseEl = document.getElementById('sla-response');
-    if (inc.responseTime) {
-        responseEl.querySelector('.sla-fill').style.width = '100%';
-        responseEl.querySelector('.sla-fill').classList.add('completed');
-        responseEl.querySelector('.sla-status').textContent = 'Met';
-    } else if (inc.slaTargetResponse) {
-        const progress = calculateSLAProgress(inc.createdAt, inc.slaTargetResponse);
-        responseEl.querySelector('.sla-fill').style.width = Math.min(progress, 100) + '%';
-        responseEl.querySelector('.sla-fill').classList.toggle('warning', progress > 70);
-        responseEl.querySelector('.sla-fill').classList.toggle('critical', progress > 90);
-        responseEl.querySelector('.sla-status').textContent = progress >= 100 ? 'Breached' : Math.round(100 - progress) + '% remaining';
-    }
-
-    // Resolution SLA
-    const resolutionEl = document.getElementById('sla-resolution');
-    if (inc.resolvedAt) {
-        resolutionEl.querySelector('.sla-fill').style.width = '100%';
-        resolutionEl.querySelector('.sla-fill').classList.add('completed');
-        resolutionEl.querySelector('.sla-status').textContent = 'Met';
-    } else if (inc.slaTargetResolution) {
-        const progress = calculateSLAProgress(inc.createdAt, inc.slaTargetResolution);
-        resolutionEl.querySelector('.sla-fill').style.width = Math.min(progress, 100) + '%';
-        resolutionEl.querySelector('.sla-fill').classList.toggle('warning', progress > 70);
-        resolutionEl.querySelector('.sla-fill').classList.toggle('critical', progress > 90);
-        resolutionEl.querySelector('.sla-status').textContent = progress >= 100 ? 'Breached' : Math.round(100 - progress) + '% remaining';
-    }
-}
-
-function calculateSLAProgress(start, target) {
-    const startDate = new Date(start);
-    const targetDate = new Date(target);
-    const now = new Date();
-    const total = targetDate - startDate;
-    const elapsed = now - startDate;
-    return (elapsed / total) * 100;
-}
-
-async function loadNotes() {
-    try {
-        const response = await fetch(`/api/proxy/incidents/${incidentId}/notes`, {
-            headers: {
-                'Authorization': 'Bearer ' + getToken()
+            if (data.success) {
+                renderNotes(data.data);
             }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            renderNotes(data.data);
+        } catch (error) {
+            console.error('Error loading notes:', error);
         }
-    } catch (error) {
-        console.error('Error loading notes:', error);
-    }
-}
-
-function renderNotes(notes) {
-    const timeline = document.getElementById('notes-timeline');
-
-    if (!notes || notes.length === 0) {
-        timeline.innerHTML = '<p class="text-muted text-center">No work notes yet</p>';
-        return;
     }
 
-    timeline.innerHTML = notes.map(note => `
+    function renderNotes(notes) {
+        const timeline = document.getElementById('notes-timeline');
+
+        if (!notes || notes.length === 0) {
+            timeline.innerHTML = '<p class="text-muted text-center">No work notes yet</p>';
+            return;
+        }
+
+        timeline.innerHTML = notes.map(note => `
         <div class="timeline-item ${note.isInternal ? 'internal' : ''}">
             <div class="timeline-marker">
                 <span class="avatar avatar-sm">${getInitials(note.createdBy?.firstName, note.createdBy?.lastName)}</span>
@@ -1530,36 +1574,36 @@ function renderNotes(notes) {
             </div>
         </div>
     `).join('');
-}
+    }
 
-async function loadHistory() {
-    try {
-        const response = await fetch(`/api/proxy/incidents/${incidentId}/history`, {
-            headers: {
-                'Authorization': 'Bearer ' + getToken()
+    async function loadHistory() {
+        try {
+            const response = await fetch(`/api/proxy/incidents/${incidentId}/history`, {
+                headers: {
+                    'Authorization': 'Bearer ' + getToken()
+                }
+            });
+
+            const data = await response.json();
+            document.getElementById('history-timeline').dataset.loaded = 'true';
+
+            if (data.success) {
+                renderHistory(data.data);
             }
-        });
-
-        const data = await response.json();
-        document.getElementById('history-timeline').dataset.loaded = 'true';
-
-        if (data.success) {
-            renderHistory(data.data);
+        } catch (error) {
+            console.error('Error loading history:', error);
         }
-    } catch (error) {
-        console.error('Error loading history:', error);
-    }
-}
-
-function renderHistory(history) {
-    const timeline = document.getElementById('history-timeline');
-
-    if (!history || history.length === 0) {
-        timeline.innerHTML = '<p class="text-muted text-center">No history available</p>';
-        return;
     }
 
-    timeline.innerHTML = history.map(entry => `
+    function renderHistory(history) {
+        const timeline = document.getElementById('history-timeline');
+
+        if (!history || history.length === 0) {
+            timeline.innerHTML = '<p class="text-muted text-center">No history available</p>';
+            return;
+        }
+
+        timeline.innerHTML = history.map(entry => `
         <div class="timeline-item">
             <div class="timeline-marker">
                 <i class="fas fa-${getHistoryIcon(entry.action)}"></i>
@@ -1582,307 +1626,350 @@ function renderHistory(history) {
             </div>
         </div>
     `).join('');
-}
-
-async function addWorkNote() {
-    const content = document.getElementById('new-note').value.trim();
-    const isInternal = document.getElementById('note-internal').checked;
-
-    if (!content) {
-        showError('Please enter a note');
-        return;
     }
 
-    try {
-        const response = await fetch(`/api/proxy/incidents/${incidentId}/notes`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + getToken()
-            },
-            body: JSON.stringify({ content, isInternal })
-        });
+    async function addWorkNote() {
+        const content = document.getElementById('new-note').value.trim();
+        const isInternal = document.getElementById('note-internal').checked;
 
-        const data = await response.json();
+        if (!content) {
+            showError('Please enter a note');
+            return;
+        }
 
-        if (data.success) {
-            document.getElementById('new-note').value = '';
-            document.getElementById('note-internal').checked = false;
-            loadNotes();
-            showNotification('Note added successfully', 'success');
+        try {
+            const response = await fetch(`/api/proxy/incidents/${incidentId}/notes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: JSON.stringify({ content, isInternal })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('new-note').value = '';
+                document.getElementById('note-internal').checked = false;
+                loadNotes();
+                showNotification('Note added successfully', 'success');
+            } else {
+                showError(data.error || 'Failed to add note');
+            }
+        } catch (error) {
+            showError('Failed to add note');
+        }
+    }
+
+    function showActionMenu() {
+        const menu = document.getElementById('action-menu');
+        menu.classList.toggle('active');
+    }
+
+    function showResolveModal() {
+        document.getElementById('resolve-modal').classList.add('active');
+    }
+
+    function showAssignModal() {
+        loadTeamsAndUsers();
+        document.getElementById('assign-modal').classList.add('active');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    async function loadTeamsAndUsers() {
+        try {
+            const [teamsRes, usersRes] = await Promise.all([
+                fetch('/api/proxy/teams', { headers: { 'Authorization': 'Bearer ' + getToken() } }),
+                fetch('/api/proxy/users', { headers: { 'Authorization': 'Bearer ' + getToken() } })
+            ]);
+
+            const teamsData = await teamsRes.json();
+            const usersData = await usersRes.json();
+
+            if (teamsData.success) {
+                const groupSelect = document.getElementById('assign-group');
+                groupSelect.innerHTML = '<option value="">Select a group...</option>' +
+                    teamsData.data.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            }
+
+            if (usersData.success) {
+                const userSelect = document.getElementById('assign-user');
+                userSelect.innerHTML = '<option value="">Select a user...</option>' +
+                    usersData.data.map(u => `<option value="${u.id}">${u.firstName} ${u.lastName}</option>`).join('');
+            }
+        } catch (error) {
+            console.error('Error loading teams/users:', error);
+        }
+    }
+
+    async function submitAssign() {
+        const groupId = document.getElementById('assign-group').value;
+        const userId = document.getElementById('assign-user').value;
+        const notes = document.getElementById('assign-notes').value;
+
+        try {
+            const response = await fetch(`/api/proxy/incidents/${incidentId}/assign`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: JSON.stringify({
+                    assignedToId: userId || null,
+                    assignmentGroupId: groupId || null,
+                    notes
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                closeModal('assign-modal');
+                loadIncident();
+                showNotification('Incident assigned successfully', 'success');
+            } else {
+                showError(data.error || 'Failed to assign incident');
+            }
+        } catch (error) {
+            showError('Failed to assign incident');
+        }
+    }
+
+    async function submitResolve() {
+        const code = document.getElementById('resolution-code').value;
+        const notes = document.getElementById('resolution-notes').value.trim();
+
+        if (!notes) {
+            showError('Please enter resolution notes');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/proxy/incidents/${incidentId}/resolve`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: JSON.stringify({
+                    resolutionCode: code,
+                    resolutionNotes: notes
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                closeModal('resolve-modal');
+                loadIncident();
+                showNotification('Incident resolved successfully', 'success');
+            } else {
+                showError(data.error || 'Failed to resolve incident');
+            }
+        } catch (error) {
+            showError('Failed to resolve incident');
+        }
+    }
+
+    async function updateState(newState) {
+        try {
+            const response = await fetch(`/api/proxy/incidents/${incidentId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: JSON.stringify({ state: newState })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                loadIncident();
+                showNotification('State updated successfully', 'success');
+            } else {
+                showError(data.error || 'Failed to update state');
+            }
+        } catch (error) {
+            showError('Failed to update state');
+        }
+    }
+
+    async function assignToMe() {
+        try {
+            const response = await fetch(`/api/proxy/incidents/${incidentId}/assign`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: JSON.stringify({ assignToMe: true })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                loadIncident();
+                showNotification('Incident assigned to you', 'success');
+            } else {
+                showError(data.error || 'Failed to assign incident');
+            }
+        } catch (error) {
+            showError('Failed to assign incident');
+        }
+    }
+
+    function refreshIncident() {
+        loadIncident();
+    }
+
+    // Utility functions
+    function formatState(state) {
+        const states = {
+            'NEW': 'New',
+            'IN_PROGRESS': 'In Progress',
+            'ON_HOLD': 'On Hold',
+            'RESOLVED': 'Resolved',
+            'CLOSED': 'Closed',
+            'CANCELLED': 'Cancelled'
+        };
+        return states[state] || state;
+    }
+
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '-';
+        return new Date(dateStr).toLocaleString();
+    }
+
+    function formatRelativeTime(dateStr) {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return minutes + ' min ago';
+        if (hours < 24) return hours + ' hours ago';
+        if (days < 7) return days + ' days ago';
+        return date.toLocaleDateString();
+    }
+
+    function formatDescription(text) {
+        if (!text) return '<p class="text-muted">No description provided</p>';
+        return text.split('\n').map(p => `<p>${escapeHtml(p)}</p>`).join('');
+    }
+
+    function getInitials(firstName, lastName) {
+        return (firstName?.charAt(0) || '') + (lastName?.charAt(0) || '');
+    }
+
+    function getCIIcon(type) {
+        const icons = {
+            'SERVER': 'server',
+            'DATABASE': 'database',
+            'NETWORK_DEVICE': 'network-wired',
+            'APPLICATION': 'window-maximize',
+            'STORAGE': 'hdd',
+            'VIRTUAL_MACHINE': 'cloud'
+        };
+        return icons[type] || 'cube';
+    }
+
+    function getHistoryIcon(action) {
+        const icons = {
+            'created': 'plus',
+            'updated': 'edit',
+            'assigned': 'user-plus',
+            'resolved': 'check',
+            'closed': 'times',
+            'reopened': 'redo'
+        };
+        return icons[action?.toLowerCase()] || 'circle';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+
+    function getToken() {
+        return localStorage.getItem('authToken') || '';
+    }
+
+    function showNotification(message, type) {
+        if (window.showToast) {
+            window.showToast(message, type);
         } else {
-            showError(data.error || 'Failed to add note');
+            alert(message);
         }
-    } catch (error) {
-        showError('Failed to add note');
     }
-}
 
-function showActionMenu() {
-    const menu = document.getElementById('action-menu');
-    menu.classList.toggle('active');
-}
+    function showError(message) {
+        showNotification(message, 'error');
+    }
 
-function showResolveModal() {
-    document.getElementById('resolve-modal').classList.add('active');
-}
+    // Close menus when clicking outside
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.btn-group')) {
+            document.getElementById('action-menu').classList.remove('active');
+        }
+    });
 
-function showAssignModal() {
-    loadTeamsAndUsers();
-    document.getElementById('assign-modal').classList.add('active');
-}
+    // Auto-refresh SLA timer
+    setInterval(() => {
+        if (incident) {
+            updateSLATimer(incident);
+        }
+    }, 1000);
 
-function closeModal(id) {
-    document.getElementById(id).classList.remove('active');
-}
+    function editSummary() {
+        if (!incident) return;
+        document.getElementById('edit-short-description').value = incident.shortDescription || '';
+        document.getElementById('edit-description').value = incident.description || '';
+        document.getElementById('edit-summary-modal').classList.add('active');
+    }
 
-async function loadTeamsAndUsers() {
-    try {
-        const [teamsRes, usersRes] = await Promise.all([
-            fetch('/api/proxy/teams', { headers: { 'Authorization': 'Bearer ' + getToken() } }),
-            fetch('/api/proxy/users', { headers: { 'Authorization': 'Bearer ' + getToken() } })
-        ]);
+    async function submitEditSummary() {
+        const shortDescription = document.getElementById('edit-short-description').value.trim();
+        const description = document.getElementById('edit-description').value.trim();
 
-        const teamsData = await teamsRes.json();
-        const usersData = await usersRes.json();
-
-        if (teamsData.success) {
-            const groupSelect = document.getElementById('assign-group');
-            groupSelect.innerHTML = '<option value="">Select a group...</option>' +
-                teamsData.data.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        if (!shortDescription) {
+            showError('Short description is required');
+            return;
         }
 
-        if (usersData.success) {
-            const userSelect = document.getElementById('assign-user');
-            userSelect.innerHTML = '<option value="">Select a user...</option>' +
-                usersData.data.map(u => `<option value="${u.id}">${u.firstName} ${u.lastName}</option>`).join('');
+        try {
+            const response = await fetch(`/api/proxy/incidents/${incidentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: JSON.stringify({
+                    shortDescription,
+                    description
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                closeModal('edit-summary-modal');
+                loadIncident();
+                showNotification('Incident updated successfully', 'success');
+            } else {
+                showError(data.error || 'Failed to update incident');
+            }
+        } catch (error) {
+            showError('Failed to update incident');
         }
-    } catch (error) {
-        console.error('Error loading teams/users:', error);
     }
-}
-
-async function submitAssign() {
-    const groupId = document.getElementById('assign-group').value;
-    const userId = document.getElementById('assign-user').value;
-    const notes = document.getElementById('assign-notes').value;
-
-    try {
-        const response = await fetch(`/api/proxy/incidents/${incidentId}/assign`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + getToken()
-            },
-            body: JSON.stringify({
-                assignedToId: userId || null,
-                assignmentGroupId: groupId || null,
-                notes
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            closeModal('assign-modal');
-            loadIncident();
-            showNotification('Incident assigned successfully', 'success');
-        } else {
-            showError(data.error || 'Failed to assign incident');
-        }
-    } catch (error) {
-        showError('Failed to assign incident');
-    }
-}
-
-async function submitResolve() {
-    const code = document.getElementById('resolution-code').value;
-    const notes = document.getElementById('resolution-notes').value.trim();
-
-    if (!notes) {
-        showError('Please enter resolution notes');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/proxy/incidents/${incidentId}/resolve`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + getToken()
-            },
-            body: JSON.stringify({
-                resolutionCode: code,
-                resolutionNotes: notes
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            closeModal('resolve-modal');
-            loadIncident();
-            showNotification('Incident resolved successfully', 'success');
-        } else {
-            showError(data.error || 'Failed to resolve incident');
-        }
-    } catch (error) {
-        showError('Failed to resolve incident');
-    }
-}
-
-async function updateState(newState) {
-    try {
-        const response = await fetch(`/api/proxy/incidents/${incidentId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + getToken()
-            },
-            body: JSON.stringify({ state: newState })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            loadIncident();
-            showNotification('State updated successfully', 'success');
-        } else {
-            showError(data.error || 'Failed to update state');
-        }
-    } catch (error) {
-        showError('Failed to update state');
-    }
-}
-
-async function assignToMe() {
-    try {
-        const response = await fetch(`/api/proxy/incidents/${incidentId}/assign`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + getToken()
-            },
-            body: JSON.stringify({ assignToMe: true })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            loadIncident();
-            showNotification('Incident assigned to you', 'success');
-        } else {
-            showError(data.error || 'Failed to assign incident');
-        }
-    } catch (error) {
-        showError('Failed to assign incident');
-    }
-}
-
-function refreshIncident() {
-    loadIncident();
-}
-
-// Utility functions
-function formatState(state) {
-    const states = {
-        'NEW': 'New',
-        'IN_PROGRESS': 'In Progress',
-        'ON_HOLD': 'On Hold',
-        'RESOLVED': 'Resolved',
-        'CLOSED': 'Closed',
-        'CANCELLED': 'Cancelled'
-    };
-    return states[state] || state;
-}
-
-function formatDateTime(dateStr) {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString();
-}
-
-function formatRelativeTime(dateStr) {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return minutes + ' min ago';
-    if (hours < 24) return hours + ' hours ago';
-    if (days < 7) return days + ' days ago';
-    return date.toLocaleDateString();
-}
-
-function formatDescription(text) {
-    if (!text) return '<p class="text-muted">No description provided</p>';
-    return text.split('\n').map(p => `<p>${escapeHtml(p)}</p>`).join('');
-}
-
-function getInitials(firstName, lastName) {
-    return (firstName?.charAt(0) || '') + (lastName?.charAt(0) || '');
-}
-
-function getCIIcon(type) {
-    const icons = {
-        'SERVER': 'server',
-        'DATABASE': 'database',
-        'NETWORK_DEVICE': 'network-wired',
-        'APPLICATION': 'window-maximize',
-        'STORAGE': 'hdd',
-        'VIRTUAL_MACHINE': 'cloud'
-    };
-    return icons[type] || 'cube';
-}
-
-function getHistoryIcon(action) {
-    const icons = {
-        'created': 'plus',
-        'updated': 'edit',
-        'assigned': 'user-plus',
-        'resolved': 'check',
-        'closed': 'times',
-        'reopened': 'redo'
-    };
-    return icons[action?.toLowerCase()] || 'circle';
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text || '';
-    return div.innerHTML;
-}
-
-function getToken() {
-    return localStorage.getItem('authToken') || '';
-}
-
-function showNotification(message, type) {
-    if (window.showToast) {
-        window.showToast(message, type);
-    } else {
-        alert(message);
-    }
-}
-
-function showError(message) {
-    showNotification(message, 'error');
-}
-
-// Close menus when clicking outside
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.btn-group')) {
-        document.getElementById('action-menu').classList.remove('active');
-    }
-});
-
-// Auto-refresh SLA timer
-setInterval(() => {
-    if (incident) {
-        updateSLATimer(incident);
-    }
-}, 1000);
 </script>
 {% endblock %}

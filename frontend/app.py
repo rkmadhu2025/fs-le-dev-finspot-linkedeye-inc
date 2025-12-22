@@ -96,6 +96,9 @@ def api_request(method, endpoint, data=None, token=None):
     elif current_user.is_authenticated:
         headers['Authorization'] = f'Bearer {current_user.token}'
 
+    app.logger.info(f"[API] {method} {url}")
+    app.logger.info(f"[API] Auth header present: {'Authorization' in headers}")
+
     try:
         if method == 'GET':
             response = requests.get(url, headers=headers, params=data, timeout=10)
@@ -108,10 +111,16 @@ def api_request(method, endpoint, data=None, token=None):
         else:
             return None
 
-        return response.json()
+        app.logger.info(f"[API] Response status: {response.status_code}")
+        
+        result = response.json()
+        if not result.get('success'):
+            app.logger.error(f"[API] Backend error: {result.get('error')}")
+        
+        return result
     except requests.exceptions.RequestException as e:
-        app.logger.error(f"API request failed: {e}")
-        return {'success': False, 'error': 'API connection failed'}
+        app.logger.error(f"[API] Request exception: {e}")
+        return {'success': False, 'error': f'API connection failed: {str(e)}'}
 
 
 @app.before_request
@@ -320,6 +329,17 @@ def incident_create():
         teams=teams.get('data', []) if teams else [],
         assets=assets.get('data', []) if assets else []
     )
+
+
+# ============================================
+# ALERT ROUTES
+# ============================================
+
+@app.route('/alerts')
+@login_required
+def alerts_list():
+    """Alert list view"""
+    return render_template('alerts/list.html')
 
 
 # ============================================
@@ -644,8 +664,22 @@ def linkedeye_monitoring():
 @csrf.exempt
 def api_proxy(endpoint):
     """Proxy API requests for AJAX calls"""
+    app.logger.info(f"[PROXY] {request.method} /{endpoint}")
+    app.logger.info(f"[PROXY] User: {current_user.email if current_user.is_authenticated else 'None'}")
+    app.logger.info(f"[PROXY] Token present: {bool(current_user.token) if current_user.is_authenticated else False}")
+    
     data = request.get_json() if request.method in ['POST', 'PUT'] else request.args.to_dict()
+    app.logger.info(f"[PROXY] Request data: {data}")
+    
     response = api_request(request.method, f'/{endpoint}', data)
+    
+    if response:
+        app.logger.info(f"[PROXY] Response success: {response.get('success')}")
+        if not response.get('success'):
+            app.logger.error(f"[PROXY] Response error: {response.get('error')}")
+    else:
+        app.logger.error(f"[PROXY] Response is None")
+    
     return jsonify(response)
 
 
