@@ -1,0 +1,139 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Create Problem - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <nav class="breadcrumb">
+            <a href="{{ url_for('problems_list') }}">Problems</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Create New</span>
+        </nav>
+        <h1 class="page-title">Create Problem Record</h1>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+        <button class="btn btn-primary" onclick="submitProblem()">
+            <i class="fas fa-save"></i> Create Problem
+        </button>
+    </div>
+</div>
+
+<form id="problem-form" class="create-form">
+    <div class="form-grid">
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-info-circle"></i> Problem Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Short Description <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="shortDescription" name="shortDescription" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="required">*</span></label>
+                        <textarea class="form-textarea" id="description" name="description" rows="4" required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Priority <span class="required">*</span></label>
+                            <select class="form-select" id="priority" name="priority" required>
+                                <option value="">Select priority...</option>
+                                <option value="P1">P1 - Critical</option>
+                                <option value="P2">P2 - High</option>
+                                <option value="P3">P3 - Medium</option>
+                                <option value="P4">P4 - Low</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category">
+                                <option value="">Select category...</option>
+                                <option value="Infrastructure">Infrastructure</option>
+                                <option value="Network">Network</option>
+                                <option value="Database">Database</option>
+                                <option value="Application">Application</option>
+                                <option value="Security">Security</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-search"></i> Root Cause Analysis</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Root Cause</label>
+                        <textarea class="form-textarea" id="rootCause" name="rootCause" rows="3" placeholder="What is the underlying cause?"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Workaround</label>
+                        <textarea class="form-textarea" id="workaround" name="workaround" rows="3" placeholder="Any temporary solution?"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Problem
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('problem-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitProblem();
+});
+
+async function submitProblem() {
+    const formData = {
+        shortDescription: document.getElementById('shortDescription').value,
+        description: document.getElementById('description').value,
+        priority: document.getElementById('priority').value,
+        category: document.getElementById('category').value,
+        rootCause: document.getElementById('rootCause').value,
+        workaround: document.getElementById('workaround').value
+    };
+
+    try {
+        const response = await fetch('/api/proxy/problems', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            window.location.href = '/problems/' + data.data.id;
+        } else {
+            alert(data.error || 'Failed to create problem');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to create problem');
+    }
+}
+</script>
+{% endblock %}

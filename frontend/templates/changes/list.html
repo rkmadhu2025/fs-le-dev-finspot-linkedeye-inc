@@ -1,0 +1,562 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Change Management - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Change Management</h1>
+        <p class="page-subtitle">Plan, approve, and implement changes safely</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="showCalendarView()">
+            <i class="fas fa-calendar-alt"></i> Calendar
+        </button>
+        <a href="{{ url_for('change_create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Change
+        </a>
+    </div>
+</div>
+
+<!-- Change Pipeline -->
+<div class="change-pipeline">
+    <div class="pipeline-stage" data-state="NEW">
+        <div class="pipeline-header">
+            <span class="pipeline-title">Draft</span>
+            <span class="pipeline-count" id="count-new">0</span>
+        </div>
+        <div class="pipeline-bar pipeline-new"></div>
+    </div>
+    <div class="pipeline-stage" data-state="ASSESS">
+        <div class="pipeline-header">
+            <span class="pipeline-title">Assessment</span>
+            <span class="pipeline-count" id="count-assess">0</span>
+        </div>
+        <div class="pipeline-bar pipeline-assess"></div>
+    </div>
+    <div class="pipeline-stage" data-state="AUTHORIZE">
+        <div class="pipeline-header">
+            <span class="pipeline-title">Authorization</span>
+            <span class="pipeline-count" id="count-authorize">0</span>
+        </div>
+        <div class="pipeline-bar pipeline-authorize"></div>
+    </div>
+    <div class="pipeline-stage" data-state="SCHEDULED">
+        <div class="pipeline-header">
+            <span class="pipeline-title">Scheduled</span>
+            <span class="pipeline-count" id="count-scheduled">0</span>
+        </div>
+        <div class="pipeline-bar pipeline-scheduled"></div>
+    </div>
+    <div class="pipeline-stage" data-state="IMPLEMENT">
+        <div class="pipeline-header">
+            <span class="pipeline-title">Implementation</span>
+            <span class="pipeline-count" id="count-implement">0</span>
+        </div>
+        <div class="pipeline-bar pipeline-implement"></div>
+    </div>
+    <div class="pipeline-stage" data-state="REVIEW">
+        <div class="pipeline-header">
+            <span class="pipeline-title">Review</span>
+            <span class="pipeline-count" id="count-review">0</span>
+        </div>
+        <div class="pipeline-bar pipeline-review"></div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-filter"></i> Filters</h3>
+        <button class="btn btn-text" onclick="clearFilters()">Clear All</button>
+    </div>
+    <div class="card-body">
+        <div class="filters-grid">
+            <div class="form-group">
+                <label class="form-label">Search</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="form-input" id="filter-search" placeholder="Search changes...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">State</label>
+                <select class="form-select" id="filter-state">
+                    <option value="">All States</option>
+                    <option value="NEW">Draft</option>
+                    <option value="ASSESS">Assessment</option>
+                    <option value="AUTHORIZE">Authorization</option>
+                    <option value="SCHEDULED">Scheduled</option>
+                    <option value="IMPLEMENT">Implementation</option>
+                    <option value="REVIEW">Review</option>
+                    <option value="CLOSED">Closed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Type</label>
+                <select class="form-select" id="filter-type">
+                    <option value="">All Types</option>
+                    <option value="STANDARD">Standard</option>
+                    <option value="NORMAL">Normal</option>
+                    <option value="EMERGENCY">Emergency</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Risk Level</label>
+                <select class="form-select" id="filter-risk">
+                    <option value="">All Risk Levels</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select class="form-select" id="filter-category">
+                    <option value="">All Categories</option>
+                    <option value="Infrastructure">Infrastructure</option>
+                    <option value="Network">Network</option>
+                    <option value="Database">Database</option>
+                    <option value="Application">Application</option>
+                    <option value="Security">Security</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Scheduled Date</label>
+                <input type="date" class="form-input" id="filter-date">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Changes Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-exchange-alt"></i> Changes</h3>
+        <span class="results-count"><span id="total-count">0</span> changes</span>
+    </div>
+    <div class="card-body no-padding">
+        <div class="table-responsive">
+            <table class="data-table" id="changes-table">
+                <thead>
+                    <tr>
+                        <th>Number</th>
+                        <th>Short Description</th>
+                        <th>Type</th>
+                        <th>State</th>
+                        <th>Risk</th>
+                        <th>Planned Start</th>
+                        <th>Assignment Group</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="changes-tbody">
+                    <tr class="loading-row">
+                        <td colspan="8">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span>Loading changes...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="pagination">
+            <button class="pagination-btn" id="prev-page" disabled>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <div class="pagination-info">
+                Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+            </div>
+            <button class="pagination-btn" id="next-page">
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Calendar Modal -->
+<div class="modal" id="calendar-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-xl">
+        <div class="modal-header">
+            <h3 class="modal-title">Change Calendar</h3>
+            <button class="modal-close" onclick="closeModal('calendar-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="calendar-controls">
+                <button class="btn btn-secondary" onclick="changeMonth(-1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <h4 id="calendar-month">December 2025</h4>
+                <button class="btn btn-secondary" onclick="changeMonth(1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="calendar-grid" id="calendar-grid">
+                <!-- Calendar rendered here -->
+            </div>
+            <div class="calendar-legend">
+                <span class="legend-item"><span class="legend-color standard"></span> Standard</span>
+                <span class="legend-item"><span class="legend-color normal"></span> Normal</span>
+                <span class="legend-item"><span class="legend-color emergency"></span> Emergency</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let pageSize = 20;
+let filters = {};
+let calendarDate = new Date();
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadChanges();
+    loadPipelineCounts();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Search
+    let searchTimeout;
+    document.getElementById('filter-search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filters.search = this.value;
+            currentPage = 1;
+            loadChanges();
+        }, 300);
+    });
+
+    // Filters
+    ['filter-state', 'filter-type', 'filter-risk', 'filter-category', 'filter-date'].forEach(id => {
+        document.getElementById(id).addEventListener('change', function() {
+            filters[id.replace('filter-', '')] = this.value;
+            currentPage = 1;
+            loadChanges();
+        });
+    });
+
+    // Pipeline clicks
+    document.querySelectorAll('.pipeline-stage').forEach(stage => {
+        stage.addEventListener('click', function() {
+            const state = this.dataset.state;
+            document.getElementById('filter-state').value = state;
+            filters.state = state;
+            currentPage = 1;
+            loadChanges();
+        });
+    });
+
+    // Pagination
+    document.getElementById('prev-page').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            loadChanges();
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+        currentPage++;
+        loadChanges();
+    });
+}
+
+async function loadChanges() {
+    try {
+        const params = new URLSearchParams({
+            page: currentPage,
+            limit: pageSize,
+            ...filters
+        });
+
+        const response = await fetch(`/api/proxy/changes?${params}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            renderChanges(data.data);
+            updatePagination(data.pagination);
+        }
+    } catch (error) {
+        console.error('Error loading changes:', error);
+    }
+}
+
+async function loadPipelineCounts() {
+    try {
+        const response = await fetch('/api/proxy/changes/stats', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const counts = data.data.byState || {};
+            document.getElementById('count-new').textContent = counts.NEW || 0;
+            document.getElementById('count-assess').textContent = counts.ASSESS || 0;
+            document.getElementById('count-authorize').textContent = counts.AUTHORIZE || 0;
+            document.getElementById('count-scheduled').textContent = counts.SCHEDULED || 0;
+            document.getElementById('count-implement').textContent = counts.IMPLEMENT || 0;
+            document.getElementById('count-review').textContent = counts.REVIEW || 0;
+        }
+    } catch (error) {
+        console.error('Error loading counts:', error);
+    }
+}
+
+function renderChanges(changes) {
+    const tbody = document.getElementById('changes-tbody');
+
+    if (!changes || changes.length === 0) {
+        tbody.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="8">
+                    <div class="empty-state">
+                        <i class="fas fa-exchange-alt"></i>
+                        <h4>No changes found</h4>
+                        <p>Try adjusting your filters or create a new change</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = changes.map(change => `
+        <tr onclick="viewChange('${change.id}')">
+            <td>
+                <a href="/changes/${change.id}" class="change-number">${change.number}</a>
+            </td>
+            <td class="description-cell">${escapeHtml(change.shortDescription)}</td>
+            <td>
+                <span class="badge badge-type badge-${change.type.toLowerCase()}">${change.type}</span>
+            </td>
+            <td>
+                <span class="badge badge-state badge-${change.state.toLowerCase()}">${formatState(change.state)}</span>
+            </td>
+            <td>
+                <span class="badge badge-risk badge-risk-${change.riskLevel.toLowerCase()}">${change.riskLevel}</span>
+            </td>
+            <td>${change.plannedStartDate ? formatDateTime(change.plannedStartDate) : '-'}</td>
+            <td>${change.assignmentGroup?.name || '-'}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon" onclick="event.stopPropagation(); approveChange('${change.id}')" title="Approve">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn-icon" onclick="event.stopPropagation(); rejectChange('${change.id}')" title="Reject">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+
+    document.getElementById('total-count').textContent = changes.length;
+}
+
+function updatePagination(pagination) {
+    if (!pagination) return;
+    document.getElementById('current-page').textContent = pagination.page;
+    document.getElementById('total-pages').textContent = pagination.totalPages;
+    document.getElementById('prev-page').disabled = pagination.page <= 1;
+    document.getElementById('next-page').disabled = pagination.page >= pagination.totalPages;
+}
+
+function viewChange(id) {
+    window.location.href = '/changes/' + id;
+}
+
+function showCalendarView() {
+    document.getElementById('calendar-modal').classList.add('active');
+    renderCalendar();
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+async function renderCalendar() {
+    const grid = document.getElementById('calendar-grid');
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+
+    document.getElementById('calendar-month').textContent =
+        calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    // Get changes for this month
+    const startDate = new Date(year, month, 1).toISOString();
+    const endDate = new Date(year, month + 1, 0).toISOString();
+
+    let changesMap = {};
+    try {
+        const response = await fetch(`/api/proxy/changes?plannedStartDate_gte=${startDate}&plannedStartDate_lte=${endDate}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await response.json();
+        if (data.success) {
+            data.data.forEach(change => {
+                const date = new Date(change.plannedStartDate).getDate();
+                if (!changesMap[date]) changesMap[date] = [];
+                changesMap[date].push(change);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading calendar changes:', error);
+    }
+
+    // Render calendar
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+
+    let html = '<div class="calendar-header">';
+    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+        html += `<div class="calendar-day-header">${day}</div>`;
+    });
+    html += '</div><div class="calendar-body">';
+
+    // Empty cells for days before first day of month
+    for (let i = 0; i < firstDay; i++) {
+        html += '<div class="calendar-cell empty"></div>';
+    }
+
+    // Days of month
+    for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
+        const changes = changesMap[day] || [];
+
+        html += `<div class="calendar-cell ${isToday ? 'today' : ''}">
+            <span class="calendar-date">${day}</span>
+            <div class="calendar-events">
+                ${changes.slice(0, 3).map(c => `
+                    <div class="calendar-event ${c.type.toLowerCase()}" onclick="viewChange('${c.id}')" title="${c.number}: ${c.shortDescription}">
+                        ${c.number}
+                    </div>
+                `).join('')}
+                ${changes.length > 3 ? `<div class="calendar-more">+${changes.length - 3} more</div>` : ''}
+            </div>
+        </div>`;
+    }
+
+    html += '</div>';
+    grid.innerHTML = html;
+}
+
+function changeMonth(delta) {
+    calendarDate.setMonth(calendarDate.getMonth() + delta);
+    renderCalendar();
+}
+
+function clearFilters() {
+    filters = {};
+    document.querySelectorAll('.form-input, .form-select').forEach(el => el.value = '');
+    currentPage = 1;
+    loadChanges();
+}
+
+async function approveChange(id) {
+    if (!confirm('Are you sure you want to approve this change?')) return;
+
+    try {
+        const response = await fetch(`/api/proxy/changes/${id}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showNotification('Change approved', 'success');
+            loadChanges();
+            loadPipelineCounts();
+        } else {
+            showError(data.error || 'Failed to approve change');
+        }
+    } catch (error) {
+        showError('Failed to approve change');
+    }
+}
+
+async function rejectChange(id) {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+
+    try {
+        const response = await fetch(`/api/proxy/changes/${id}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify({ reason })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showNotification('Change rejected', 'success');
+            loadChanges();
+            loadPipelineCounts();
+        } else {
+            showError(data.error || 'Failed to reject change');
+        }
+    } catch (error) {
+        showError('Failed to reject change');
+    }
+}
+
+function formatState(state) {
+    const states = {
+        'NEW': 'Draft',
+        'ASSESS': 'Assessment',
+        'AUTHORIZE': 'Authorization',
+        'SCHEDULED': 'Scheduled',
+        'IMPLEMENT': 'Implementation',
+        'REVIEW': 'Review',
+        'CLOSED': 'Closed',
+        'CANCELLED': 'Cancelled'
+    };
+    return states[state] || state;
+}
+
+function formatDateTime(dateStr) {
+    return new Date(dateStr).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function getToken() {
+    return localStorage.getItem('authToken') || '';
+}
+
+function showNotification(message, type) {
+    if (window.showToast) window.showToast(message, type);
+    else alert(message);
+}
+
+function showError(message) {
+    showNotification(message, 'error');
+}
+</script>
+{% endblock %}

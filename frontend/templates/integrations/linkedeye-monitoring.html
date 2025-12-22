@@ -1,0 +1,995 @@
+{% extends "components/layout.html" %}
+
+{% block title %}LinkedEye Monitoring Integration - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <nav class="breadcrumb">
+            <a href="{{ url_for('integrations') }}">Integrations</a>
+            <span class="breadcrumb-separator">/</span>
+            <span>LinkedEye Monitoring</span>
+        </nav>
+        <h1 class="page-title">
+            <span class="integration-badge linkedeye-badge">
+                <i class="fas fa-eye"></i>
+            </span>
+            LinkedEye Monitoring Integration
+        </h1>
+        <p class="page-subtitle">Unified monitoring with intelligent alerting and auto-remediation</p>
+    </div>
+    <div class="page-header-right">
+        <span id="connectionStatus" class="connection-status disconnected">
+            <i class="fas fa-circle"></i> Disconnected
+        </span>
+    </div>
+</div>
+
+<div class="integration-layout">
+    <!-- Configuration Panel -->
+    <div class="config-panel">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-cog"></i> Configuration</h3>
+            </div>
+            <div class="card-body">
+                <form id="monitoringConfigForm" onsubmit="event.preventDefault(); saveMonitoringConfig();">
+                    <input type="hidden" id="integrationId" value="{{ integration.id if integration else '' }}">
+
+                    <div class="form-group">
+                        <label for="integrationName">Integration Name *</label>
+                        <input type="text" id="integrationName" class="form-control"
+                               value="{{ integration.name if integration else 'LinkedEye Monitoring' }}" required>
+                    </div>
+
+                    <div class="form-section">
+                        <h4><i class="fas fa-server"></i> Monitoring Endpoints</h4>
+
+                        <div class="form-group">
+                            <label for="prometheusUrl">Prometheus URL *</label>
+                            <input type="url" id="prometheusUrl" class="form-control"
+                                   placeholder="http://prometheus:9090" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="alertmanagerUrl">Alertmanager URL</label>
+                            <input type="url" id="alertmanagerUrl" class="form-control"
+                                   placeholder="http://alertmanager:9093">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lokiUrl">Loki URL (Logs)</label>
+                            <input type="url" id="lokiUrl" class="form-control"
+                                   placeholder="http://loki:3100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="grafanaUrl">Grafana URL (Dashboards)</label>
+                            <input type="url" id="grafanaUrl" class="form-control"
+                                   placeholder="http://grafana:3000">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4><i class="fas fa-key"></i> Authentication</h4>
+
+                        <div class="form-group">
+                            <label for="authType">Authentication Type</label>
+                            <select id="authType" class="form-control" onchange="toggleAuthFields()">
+                                <option value="none">None</option>
+                                <option value="basic">Basic Auth</option>
+                                <option value="bearer">Bearer Token</option>
+                                <option value="apikey">API Key</option>
+                            </select>
+                        </div>
+
+                        <div id="basicAuthFields" class="auth-fields" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="authUsername">Username</label>
+                                    <input type="text" id="authUsername" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="authPassword">Password</label>
+                                    <input type="password" id="authPassword" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="bearerTokenField" class="auth-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="bearerToken">Bearer Token</label>
+                                <input type="password" id="bearerToken" class="form-control"
+                                       placeholder="Enter bearer token">
+                            </div>
+                        </div>
+
+                        <div id="apiKeyField" class="auth-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="apiKey">API Key</label>
+                                <input type="password" id="apiKey" class="form-control"
+                                       placeholder="Enter API key">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4><i class="fas fa-bell"></i> Alert Settings</h4>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="autoCreateIncidents" checked>
+                                <span class="checkmark"></span>
+                                Auto-create incidents from critical alerts
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enableAutoRemediation">
+                                <span class="checkmark"></span>
+                                Enable auto-remediation (StackStorm integration required)
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="alertSeverityMapping">Severity Mapping</label>
+                            <select id="alertSeverityMapping" class="form-control">
+                                <option value="default">Default (critical=P1, warning=P2, info=P3)</option>
+                                <option value="strict">Strict (all alerts=P1)</option>
+                                <option value="relaxed">Relaxed (critical=P2, warning=P3, info=P4)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="alertDeduplication">Deduplication Window</label>
+                            <select id="alertDeduplication" class="form-control">
+                                <option value="5">5 minutes</option>
+                                <option value="15" selected>15 minutes</option>
+                                <option value="30">30 minutes</option>
+                                <option value="60">1 hour</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4><i class="fas fa-sync-alt"></i> Sync Settings</h4>
+
+                        <div class="form-group">
+                            <label for="syncInterval">Metrics Sync Interval</label>
+                            <select id="syncInterval" class="form-control">
+                                <option value="15">15 seconds</option>
+                                <option value="30" selected>30 seconds</option>
+                                <option value="60">1 minute</option>
+                                <option value="300">5 minutes</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="retentionDays">Metrics Retention</label>
+                            <select id="retentionDays" class="form-control">
+                                <option value="7">7 days</option>
+                                <option value="30" selected>30 days</option>
+                                <option value="90">90 days</option>
+                                <option value="365">1 year</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="testAllConnections()">
+                            <i class="fas fa-plug"></i> Test Connections
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status & Metrics Panel -->
+    <div class="status-panel">
+        <!-- Connection Status -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-heartbeat"></i> Service Health</h3>
+                <button class="btn btn-sm btn-outline" onclick="refreshHealth()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="healthStatus" class="health-grid">
+                    <div class="health-item" data-service="prometheus">
+                        <div class="health-icon"><i class="fas fa-chart-line"></i></div>
+                        <div class="health-info">
+                            <span class="health-name">Prometheus</span>
+                            <span class="health-status pending">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="health-item" data-service="alertmanager">
+                        <div class="health-icon"><i class="fas fa-bell"></i></div>
+                        <div class="health-info">
+                            <span class="health-name">Alertmanager</span>
+                            <span class="health-status pending">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="health-item" data-service="loki">
+                        <div class="health-icon"><i class="fas fa-scroll"></i></div>
+                        <div class="health-info">
+                            <span class="health-name">Loki</span>
+                            <span class="health-status pending">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="health-item" data-service="grafana">
+                        <div class="health-icon"><i class="fas fa-tachometer-alt"></i></div>
+                        <div class="health-info">
+                            <span class="health-name">Grafana</span>
+                            <span class="health-status pending">Checking...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Metrics -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-bar"></i> Live Metrics</h3>
+            </div>
+            <div class="card-body">
+                <div id="liveMetrics" class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="targetsUp">--</div>
+                        <div class="metric-label">Targets Up</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value danger" id="targetsDown">--</div>
+                        <div class="metric-label">Targets Down</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value warning" id="alertsFiring">--</div>
+                        <div class="metric-label">Alerts Firing</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="incidentsCreated">--</div>
+                        <div class="metric-label">Incidents (24h)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Alerts -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> Recent Alerts</h3>
+            </div>
+            <div class="card-body no-padding">
+                <div id="recentAlerts" class="alert-list">
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <span>No recent alerts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Webhook Configuration -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-link"></i> Webhook Endpoint</h3>
+            </div>
+            <div class="card-body">
+                <p class="help-text">Configure Alertmanager to send alerts to this webhook:</p>
+                <div class="webhook-url">
+                    <code id="webhookUrl">{{ request.host_url }}api/v1/webhooks/alertmanager</code>
+                    <button class="btn btn-sm btn-outline" onclick="copyWebhookUrl()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div class="webhook-config-example">
+                    <button class="btn btn-sm btn-link" onclick="toggleWebhookExample()">
+                        <i class="fas fa-code"></i> View Alertmanager Config Example
+                    </button>
+                    <pre id="webhookConfigExample" style="display: none;">
+receivers:
+  - name: 'linkedeye'
+    webhook_configs:
+      - url: '{{ request.host_url }}api/v1/webhooks/alertmanager'
+        send_resolved: true
+
+route:
+  receiver: 'linkedeye'
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    margin-bottom: 0.5rem;
+}
+.breadcrumb a {
+    color: var(--primary);
+    text-decoration: none;
+}
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+.breadcrumb-separator {
+    color: var(--gray-400);
+}
+
+.integration-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+.linkedeye-badge {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.connection-status.connected {
+    background: #d1fae5;
+    color: #059669;
+}
+.connection-status.disconnected {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.connection-status i {
+    font-size: 0.6rem;
+}
+
+.integration-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+}
+@media (max-width: 1200px) {
+    .integration-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.config-panel .card-body {
+    padding: 1.5rem;
+}
+
+.form-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--gray-200);
+}
+.form-section:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+.form-section h4 {
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+    color: var(--gray-700);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.form-section h4 i {
+    color: var(--primary);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    font-size: 0.9rem;
+}
+.form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-weight: normal !important;
+}
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+/* Health Grid */
+.health-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+.health-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+}
+.health-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--gray-200);
+    color: var(--gray-600);
+}
+.health-item.healthy .health-icon {
+    background: #d1fae5;
+    color: #059669;
+}
+.health-item.unhealthy .health-icon {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.health-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.health-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+.health-status {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+}
+.health-status.healthy {
+    color: #059669;
+}
+.health-status.unhealthy {
+    color: #dc2626;
+}
+.health-status.pending {
+    color: var(--gray-400);
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+.metric-card {
+    text-align: center;
+    padding: 1rem;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+}
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+.metric-value.danger {
+    color: #dc2626;
+}
+.metric-value.warning {
+    color: #f59e0b;
+}
+.metric-label {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    margin-top: 0.25rem;
+}
+
+/* Alert List */
+.alert-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+.alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--gray-100);
+}
+.alert-item:last-child {
+    border-bottom: none;
+}
+.alert-severity {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+.alert-severity.critical {
+    background: #dc2626;
+}
+.alert-severity.warning {
+    background: #f59e0b;
+}
+.alert-severity.info {
+    background: #3b82f6;
+}
+.alert-content {
+    flex: 1;
+    min-width: 0;
+}
+.alert-title {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.alert-time {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+}
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--gray-400);
+    gap: 0.5rem;
+}
+.empty-state i {
+    font-size: 2rem;
+}
+
+/* Webhook URL */
+.webhook-url {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--gray-100);
+    border-radius: var(--radius-md);
+    margin-top: 0.5rem;
+}
+.webhook-url code {
+    flex: 1;
+    font-size: 0.8rem;
+    word-break: break-all;
+}
+.help-text {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    margin: 0;
+}
+.webhook-config-example {
+    margin-top: 1rem;
+}
+.webhook-config-example pre {
+    margin-top: 0.5rem;
+    padding: 1rem;
+    background: var(--gray-900);
+    color: #e2e8f0;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    overflow-x: auto;
+}
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.85rem;
+}
+.btn-link:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadExistingConfig();
+    refreshHealth();
+    loadLiveMetrics();
+    loadRecentAlerts();
+
+    // Refresh metrics every 30 seconds
+    setInterval(loadLiveMetrics, 30000);
+    setInterval(loadRecentAlerts, 60000);
+});
+
+function toggleAuthFields() {
+    const authType = document.getElementById('authType').value;
+    document.querySelectorAll('.auth-fields').forEach(el => el.style.display = 'none');
+
+    switch (authType) {
+        case 'basic':
+            document.getElementById('basicAuthFields').style.display = 'block';
+            break;
+        case 'bearer':
+            document.getElementById('bearerTokenField').style.display = 'block';
+            break;
+        case 'apikey':
+            document.getElementById('apiKeyField').style.display = 'block';
+            break;
+    }
+}
+
+async function loadExistingConfig() {
+    try {
+        const response = await fetch('/api/proxy/integrations');
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            // Find LinkedEye monitoring integration
+            const integration = data.data.find(i =>
+                i.type === 'LINKEDEYE_MONITORING' || i.name.includes('LinkedEye Monitoring')
+            );
+
+            if (integration) {
+                document.getElementById('integrationId').value = integration.id;
+                document.getElementById('integrationName').value = integration.name;
+
+                const config = typeof integration.config === 'string'
+                    ? JSON.parse(integration.config)
+                    : integration.config;
+
+                if (config) {
+                    if (config.prometheusUrl) document.getElementById('prometheusUrl').value = config.prometheusUrl;
+                    if (config.alertmanagerUrl) document.getElementById('alertmanagerUrl').value = config.alertmanagerUrl;
+                    if (config.lokiUrl) document.getElementById('lokiUrl').value = config.lokiUrl;
+                    if (config.grafanaUrl) document.getElementById('grafanaUrl').value = config.grafanaUrl;
+
+                    if (config.authType) {
+                        document.getElementById('authType').value = config.authType;
+                        toggleAuthFields();
+
+                        if (config.authType === 'basic') {
+                            document.getElementById('authUsername').value = config.username || '';
+                            document.getElementById('authPassword').value = config.password || '';
+                        } else if (config.authType === 'bearer') {
+                            document.getElementById('bearerToken').value = config.bearerToken || '';
+                        } else if (config.authType === 'apikey') {
+                            document.getElementById('apiKey').value = config.apiKey || '';
+                        }
+                    }
+
+                    if (config.autoCreateIncidents !== undefined) {
+                        document.getElementById('autoCreateIncidents').checked = config.autoCreateIncidents;
+                    }
+                    if (config.enableAutoRemediation !== undefined) {
+                        document.getElementById('enableAutoRemediation').checked = config.enableAutoRemediation;
+                    }
+                    if (config.alertSeverityMapping) {
+                        document.getElementById('alertSeverityMapping').value = config.alertSeverityMapping;
+                    }
+                    if (config.alertDeduplication) {
+                        document.getElementById('alertDeduplication').value = config.alertDeduplication;
+                    }
+                    if (config.syncInterval) {
+                        document.getElementById('syncInterval').value = config.syncInterval;
+                    }
+                    if (config.retentionDays) {
+                        document.getElementById('retentionDays').value = config.retentionDays;
+                    }
+                }
+
+                if (integration.status === 'ACTIVE') {
+                    updateConnectionStatus(true);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading config:', error);
+    }
+}
+
+async function saveMonitoringConfig() {
+    const id = document.getElementById('integrationId').value;
+    const name = document.getElementById('integrationName').value;
+    const authType = document.getElementById('authType').value;
+
+    const config = {
+        prometheusUrl: document.getElementById('prometheusUrl').value,
+        alertmanagerUrl: document.getElementById('alertmanagerUrl').value,
+        lokiUrl: document.getElementById('lokiUrl').value,
+        grafanaUrl: document.getElementById('grafanaUrl').value,
+        authType: authType,
+        autoCreateIncidents: document.getElementById('autoCreateIncidents').checked,
+        enableAutoRemediation: document.getElementById('enableAutoRemediation').checked,
+        alertSeverityMapping: document.getElementById('alertSeverityMapping').value,
+        alertDeduplication: parseInt(document.getElementById('alertDeduplication').value),
+        syncInterval: parseInt(document.getElementById('syncInterval').value),
+        retentionDays: parseInt(document.getElementById('retentionDays').value)
+    };
+
+    // Add auth credentials based on type
+    if (authType === 'basic') {
+        config.username = document.getElementById('authUsername').value;
+        config.password = document.getElementById('authPassword').value;
+    } else if (authType === 'bearer') {
+        config.bearerToken = document.getElementById('bearerToken').value;
+    } else if (authType === 'apikey') {
+        config.apiKey = document.getElementById('apiKey').value;
+    }
+
+    const saveBtn = document.querySelector('#monitoringConfigForm button[type="submit"]');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    try {
+        const url = id ? `/api/proxy/integrations/${id}` : '/api/proxy/integrations';
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                type: 'LINKEDEYE_MONITORING',
+                config: config,
+                status: 'ACTIVE'
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Configuration saved successfully!', 'success');
+            if (!id && data.data) {
+                document.getElementById('integrationId').value = data.data.id;
+            }
+            updateConnectionStatus(true);
+            refreshHealth();
+        } else {
+            showNotification('Failed to save: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showNotification('Error saving configuration: ' + error.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Configuration';
+    }
+}
+
+async function testAllConnections() {
+    const btn = event.target.closest('button');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+
+    await refreshHealth();
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-plug"></i> Test Connections';
+}
+
+async function refreshHealth() {
+    const services = ['prometheus', 'alertmanager', 'loki', 'grafana'];
+    let allHealthy = true;
+
+    for (const service of services) {
+        const item = document.querySelector(`.health-item[data-service="${service}"]`);
+        const statusSpan = item.querySelector('.health-status');
+
+        try {
+            const response = await fetch(`/api/proxy/integrations/${service}/test`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                item.classList.add('healthy');
+                item.classList.remove('unhealthy');
+                statusSpan.textContent = 'Connected';
+                statusSpan.className = 'health-status healthy';
+            } else {
+                item.classList.add('unhealthy');
+                item.classList.remove('healthy');
+                statusSpan.textContent = 'Disconnected';
+                statusSpan.className = 'health-status unhealthy';
+                allHealthy = false;
+            }
+        } catch (error) {
+            item.classList.add('unhealthy');
+            item.classList.remove('healthy');
+            statusSpan.textContent = 'Error';
+            statusSpan.className = 'health-status unhealthy';
+            allHealthy = false;
+        }
+    }
+
+    updateConnectionStatus(allHealthy);
+}
+
+function updateConnectionStatus(connected) {
+    const statusEl = document.getElementById('connectionStatus');
+    if (connected) {
+        statusEl.className = 'connection-status connected';
+        statusEl.innerHTML = '<i class="fas fa-circle"></i> Connected';
+    } else {
+        statusEl.className = 'connection-status disconnected';
+        statusEl.innerHTML = '<i class="fas fa-circle"></i> Disconnected';
+    }
+}
+
+async function loadLiveMetrics() {
+    try {
+        // Fetch Prometheus targets
+        const targetsResponse = await fetch('/api/proxy/integrations/prometheus/targets');
+        if (targetsResponse.ok) {
+            const targetsData = await targetsResponse.json();
+            if (targetsData.data && targetsData.data.activeTargets) {
+                const targets = targetsData.data.activeTargets;
+                const up = targets.filter(t => t.health === 'up').length;
+                const down = targets.filter(t => t.health === 'down').length;
+
+                document.getElementById('targetsUp').textContent = up;
+                document.getElementById('targetsDown').textContent = down;
+            }
+        }
+
+        // Fetch Alertmanager alerts
+        const alertsResponse = await fetch('/api/proxy/integrations/alertmanager/alerts');
+        if (alertsResponse.ok) {
+            const alertsData = await alertsResponse.json();
+            if (alertsData.data) {
+                const firing = alertsData.data.filter(a => a.status?.state === 'active').length;
+                document.getElementById('alertsFiring').textContent = firing;
+            }
+        }
+
+        // Fetch incidents created today
+        const incidentsResponse = await fetch('/api/proxy/incidents/stats');
+        if (incidentsResponse.ok) {
+            const incidentsData = await incidentsResponse.json();
+            if (incidentsData.data && incidentsData.data.today !== undefined) {
+                document.getElementById('incidentsCreated').textContent = incidentsData.data.today;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading metrics:', error);
+    }
+}
+
+async function loadRecentAlerts() {
+    try {
+        const response = await fetch('/api/proxy/integrations/alertmanager/alerts');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const alertsList = document.getElementById('recentAlerts');
+
+        if (data.data && data.data.length > 0) {
+            const alerts = data.data.slice(0, 10); // Show last 10
+            alertsList.innerHTML = alerts.map(alert => {
+                const severity = alert.labels?.severity || 'info';
+                const alertName = alert.labels?.alertname || 'Unknown';
+                const startTime = alert.startsAt ? new Date(alert.startsAt).toLocaleString() : '';
+
+                return `
+                    <div class="alert-item">
+                        <div class="alert-severity ${severity}"></div>
+                        <div class="alert-content">
+                            <div class="alert-title">${alertName}</div>
+                            <div class="alert-time">${startTime}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            alertsList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <span>No recent alerts</span>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading alerts:', error);
+    }
+}
+
+function copyWebhookUrl() {
+    const url = document.getElementById('webhookUrl').textContent;
+    navigator.clipboard.writeText(url).then(() => {
+        showNotification('Webhook URL copied to clipboard', 'success');
+    });
+}
+
+function toggleWebhookExample() {
+    const example = document.getElementById('webhookConfigExample');
+    example.style.display = example.style.display === 'none' ? 'block' : 'none';
+}
+
+function showNotification(message, type) {
+    // Use existing notification system or create simple toast
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <span>${message}</span>
+    `;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#059669' : '#dc2626'};
+        color: white;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        z-index: 9999;
+        animation: slideIn 0.3s ease;
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+</script>
+{% endblock %}

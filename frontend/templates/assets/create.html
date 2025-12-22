@@ -1,0 +1,208 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Add Asset - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <nav class="breadcrumb">
+            <a href="{{ url_for('assets_list') }}">Assets</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Add New</span>
+        </nav>
+        <h1 class="page-title">Add Configuration Item</h1>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+        <button class="btn btn-primary" onclick="submitAsset()">
+            <i class="fas fa-save"></i> Add Asset
+        </button>
+    </div>
+</div>
+
+<form id="asset-form" class="create-form">
+    <div class="form-grid">
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-info-circle"></i> Basic Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="name" name="name" required placeholder="e.g., prod-app-01.finspot.com">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Type <span class="required">*</span></label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="">Select type...</option>
+                                <option value="SERVER">Server</option>
+                                <option value="DATABASE">Database</option>
+                                <option value="NETWORK_DEVICE">Network Device</option>
+                                <option value="APPLICATION">Application</option>
+                                <option value="STORAGE">Storage</option>
+                                <option value="VIRTUAL_MACHINE">Virtual Machine</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status <span class="required">*</span></label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="LIVE">Live</option>
+                                <option value="MAINTENANCE">Maintenance</option>
+                                <option value="RETIRED">Retired</option>
+                                <option value="PLANNED">Planned</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="">Select category...</option>
+                            <option value="Production">Production</option>
+                            <option value="Staging">Staging</option>
+                            <option value="Development">Development</option>
+                            <option value="Network">Network</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-network-wired"></i> Network Details</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Hostname</label>
+                            <input type="text" class="form-input" id="hostname" name="hostname">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">IP Address</label>
+                            <input type="text" class="form-input" id="ipAddress" name="ipAddress" placeholder="192.168.1.100">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">FQDN</label>
+                        <input type="text" class="form-input" id="fqdn" name="fqdn" placeholder="server.domain.com">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-microchip"></i> Hardware Specs</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">CPU</label>
+                            <input type="text" class="form-input" id="cpu" name="cpu" placeholder="8 vCPU">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Memory</label>
+                            <input type="text" class="form-input" id="memory" name="memory" placeholder="16GB">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Storage</label>
+                            <input type="text" class="form-input" id="storage" name="storage" placeholder="500GB SSD">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">OS</label>
+                            <input type="text" class="form-input" id="os" name="os" placeholder="Ubuntu 22.04">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-map-marker-alt"></i> Location</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Data Center</label>
+                            <input type="text" class="form-input" id="dataCenter" name="dataCenter" placeholder="Mumbai-1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Location</label>
+                            <input type="text" class="form-input" id="location" name="location" placeholder="DC-Mumbai">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Asset
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('asset-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitAsset();
+});
+
+async function submitAsset() {
+    const formData = {
+        name: document.getElementById('name').value,
+        type: document.getElementById('type').value,
+        status: document.getElementById('status').value,
+        category: document.getElementById('category').value,
+        hostname: document.getElementById('hostname').value,
+        ipAddress: document.getElementById('ipAddress').value,
+        fqdn: document.getElementById('fqdn').value,
+        cpu: document.getElementById('cpu').value,
+        memory: document.getElementById('memory').value,
+        storage: document.getElementById('storage').value,
+        os: document.getElementById('os').value,
+        dataCenter: document.getElementById('dataCenter').value,
+        location: document.getElementById('location').value
+    };
+
+    try {
+        const response = await fetch('/api/proxy/assets', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            window.location.href = '/assets/' + data.data.id;
+        } else {
+            alert(data.error || 'Failed to add asset');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to add asset');
+    }
+}
+</script>
+{% endblock %}

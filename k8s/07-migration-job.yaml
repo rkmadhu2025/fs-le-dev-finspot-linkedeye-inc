@@ -1,0 +1,91 @@
+# LinkedEye-FinSpot Database Migration Job
+# Run Prisma migrations and seed data
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: linkedeye-db-migration
+  namespace: linkedeye-finspot
+  labels:
+    app: linkedeye-finspot
+    component: migration
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: linkedeye-finspot
+        component: migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migration
+          image: registry.gitlab.com/finspot-le-dev/fs-le-dev-finspot-incident-tool/backend:latest
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Starting database migration..."
+              npx prisma migrate deploy
+              echo "Migration completed. Running seed..."
+              npx prisma db seed
+              echo "Seeding completed successfully!"
+          envFrom:
+            - secretRef:
+                name: linkedeye-secrets
+          env:
+            - name: NODE_ENV
+              value: "production"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+---
+# Job for initial database creation (run once)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: linkedeye-db-init
+  namespace: linkedeye-finspot
+  labels:
+    app: linkedeye-finspot
+    component: db-init
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: linkedeye-finspot
+        component: db-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-init
+          image: postgres:15-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Creating database linkedeye_finspot if not exists..."
+              PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U $POSTGRES_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'linkedeye_finspot'" | grep -q 1 || \
+              PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U $POSTGRES_USER -d postgres -c "CREATE DATABASE linkedeye_finspot"
+              echo "Database initialization completed!"
+          env:
+            - name: POSTGRES_HOST
+              value: "postgresql-leadmin-service.postgresql-leadmin.svc.cluster.local"
+            - name: POSTGRES_USER
+              value: "root"
+            - name: POSTGRES_PASSWORD
+              value: "Fin@spot!leadmin"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"

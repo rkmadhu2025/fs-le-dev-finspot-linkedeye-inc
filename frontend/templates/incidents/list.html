@@ -1,0 +1,689 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Incidents - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Incident Management</h1>
+        <p class="page-subtitle">Track, manage, and resolve incidents across your infrastructure</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="exportIncidents()">
+            <i class="fas fa-download"></i> Export
+        </button>
+        <a href="{{ url_for('incident_create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Incident
+        </a>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="stats-grid stats-grid-5">
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-red">
+            <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-critical">-</span>
+            <span class="stat-label">Critical (P1)</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-orange">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-high">-</span>
+            <span class="stat-label">High (P2)</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-blue">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-open">-</span>
+            <span class="stat-label">Open</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-yellow">
+            <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-in-progress">-</span>
+            <span class="stat-label">In Progress</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-green">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-resolved-today">-</span>
+            <span class="stat-label">Resolved Today</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-filter"></i> Filters</h3>
+        <button class="btn btn-text" onclick="clearFilters()">Clear All</button>
+    </div>
+    <div class="card-body">
+        <div class="filters-grid">
+            <div class="form-group">
+                <label class="form-label">Search</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="form-input" id="filter-search" placeholder="Search incidents...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">State</label>
+                <select class="form-select" id="filter-state">
+                    <option value="">All States</option>
+                    <option value="NEW">New</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="ON_HOLD">On Hold</option>
+                    <option value="RESOLVED">Resolved</option>
+                    <option value="CLOSED">Closed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select class="form-select" id="filter-priority">
+                    <option value="">All Priorities</option>
+                    <option value="P1">P1 - Critical</option>
+                    <option value="P2">P2 - High</option>
+                    <option value="P3">P3 - Medium</option>
+                    <option value="P4">P4 - Low</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select class="form-select" id="filter-category">
+                    <option value="">All Categories</option>
+                    <option value="Infrastructure">Infrastructure</option>
+                    <option value="Network">Network</option>
+                    <option value="Database">Database</option>
+                    <option value="Application">Application</option>
+                    <option value="Security">Security</option>
+                    <option value="Access">Access</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Assigned To</label>
+                <select class="form-select" id="filter-assigned">
+                    <option value="">All Assignees</option>
+                    <option value="unassigned">Unassigned</option>
+                    <option value="me">Assigned to Me</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Date Range</label>
+                <select class="form-select" id="filter-date">
+                    <option value="">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Incidents Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-list"></i> Incidents</h3>
+        <div class="card-header-actions">
+            <span class="results-count"><span id="total-count">0</span> incidents</span>
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="table" title="Table View">
+                    <i class="fas fa-table"></i>
+                </button>
+                <button class="view-btn" data-view="cards" title="Card View">
+                    <i class="fas fa-th-large"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body no-padding">
+        <div class="table-responsive">
+            <table class="data-table" id="incidents-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="number">Number <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="shortDescription">Short Description <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="state">State <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="priority">Priority <i class="fas fa-sort"></i></th>
+                        <th class="sortable" data-sort="category">Category <i class="fas fa-sort"></i></th>
+                        <th>Assigned To</th>
+                        <th class="sortable" data-sort="createdAt">Created <i class="fas fa-sort"></i></th>
+                        <th>SLA</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="incidents-tbody">
+                    <tr class="loading-row">
+                        <td colspan="9">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span>Loading incidents...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="pagination">
+            <button class="pagination-btn" id="prev-page" disabled>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <div class="pagination-info">
+                Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+            </div>
+            <button class="pagination-btn" id="next-page">
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Quick View Modal -->
+<div class="modal" id="quick-view-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3 class="modal-title" id="quick-view-title">Incident Details</h3>
+            <button class="modal-close" onclick="closeQuickView()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="quick-view-body">
+            <!-- Content loaded dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeQuickView()">Close</button>
+            <a href="#" class="btn btn-primary" id="quick-view-link">View Full Details</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// State management
+let currentPage = 1;
+let pageSize = 20;
+let totalItems = 0;
+let sortField = 'createdAt';
+let sortOrder = 'desc';
+let filters = {};
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadIncidents();
+    loadStats();
+    setupEventListeners();
+    setupWebSocket();
+});
+
+function setupEventListeners() {
+    // Search with debounce
+    let searchTimeout;
+    document.getElementById('filter-search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filters.search = this.value;
+            currentPage = 1;
+            loadIncidents();
+        }, 300);
+    });
+
+    // Filter changes
+    ['filter-state', 'filter-priority', 'filter-category', 'filter-assigned', 'filter-date'].forEach(id => {
+        document.getElementById(id).addEventListener('change', function() {
+            const filterKey = id.replace('filter-', '');
+            filters[filterKey] = this.value;
+            currentPage = 1;
+            loadIncidents();
+        });
+    });
+
+    // Sorting
+    document.querySelectorAll('.sortable').forEach(th => {
+        th.addEventListener('click', function() {
+            const field = this.dataset.sort;
+            if (sortField === field) {
+                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortField = field;
+                sortOrder = 'desc';
+            }
+            updateSortIndicators();
+            loadIncidents();
+        });
+    });
+
+    // Pagination
+    document.getElementById('prev-page').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            loadIncidents();
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+        const totalPages = Math.ceil(totalItems / pageSize);
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadIncidents();
+        }
+    });
+
+    // View toggle
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            // Toggle view mode
+        });
+    });
+}
+
+function setupWebSocket() {
+    if (typeof io !== 'undefined') {
+        const socket = io();
+        socket.on('incident:created', (data) => {
+            showNotification('New incident created: ' + data.number, 'info');
+            loadIncidents();
+            loadStats();
+        });
+        socket.on('incident:updated', (data) => {
+            loadIncidents();
+            loadStats();
+        });
+    }
+}
+
+async function loadIncidents() {
+    try {
+        const params = new URLSearchParams({
+            page: currentPage,
+            limit: pageSize,
+            sortBy: sortField,
+            sortOrder: sortOrder,
+            ...filters
+        });
+
+        const response = await fetch(`/api/proxy/incidents?${params}`);
+
+        const data = await response.json();
+
+        if (data.success) {
+            renderIncidents(data.data);
+            totalItems = data.pagination?.total || 0;
+            updatePagination(data.pagination || {page: 1, totalPages: 1});
+        } else {
+            showError('Failed to load incidents: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error loading incidents:', error);
+        showError('Failed to load incidents');
+    }
+}
+
+function renderIncidents(incidents) {
+    const tbody = document.getElementById('incidents-tbody');
+
+    if (!incidents || incidents.length === 0) {
+        tbody.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="9">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h4>No incidents found</h4>
+                        <p>Try adjusting your filters or create a new incident</p>
+                        <a href="{{ url_for('incident_create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Incident
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = incidents.map(incident => `
+        <tr class="incident-row" data-id="${incident.id}" onclick="viewIncident('${incident.id}')">
+            <td>
+                <a href="/incidents/${incident.id}" class="incident-number">${incident.number}</a>
+                ${incident.source !== 'MANUAL' ? `<span class="source-badge source-${incident.source.toLowerCase()}">${incident.source}</span>` : ''}
+            </td>
+            <td class="description-cell">
+                <span class="short-description">${escapeHtml(incident.shortDescription)}</span>
+                ${incident.configItem ? `<span class="config-item"><i class="fas fa-server"></i> ${incident.configItem.name}</span>` : ''}
+            </td>
+            <td>
+                <span class="badge badge-state badge-${incident.state.toLowerCase().replace('_', '-')}">${formatState(incident.state)}</span>
+            </td>
+            <td>
+                <span class="badge badge-priority badge-${incident.priority.toLowerCase()}">${incident.priority}</span>
+            </td>
+            <td>${incident.category || '-'}</td>
+            <td>
+                ${incident.assignedTo ? `
+                    <div class="assignee">
+                        <span class="avatar avatar-sm">${getInitials(incident.assignedTo.firstName, incident.assignedTo.lastName)}</span>
+                        <span class="assignee-name">${incident.assignedTo.firstName} ${incident.assignedTo.lastName}</span>
+                    </div>
+                ` : '<span class="text-muted">Unassigned</span>'}
+            </td>
+            <td>
+                <span class="timestamp" title="${formatDateTime(incident.createdAt)}">${formatRelativeTime(incident.createdAt)}</span>
+            </td>
+            <td>
+                ${renderSLAStatus(incident)}
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon" onclick="event.stopPropagation(); quickView('${incident.id}')" title="Quick View">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-icon" onclick="event.stopPropagation(); assignIncident('${incident.id}')" title="Assign">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn-icon" onclick="event.stopPropagation(); toggleDropdown(this)">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="/incidents/${incident.id}" class="dropdown-item">
+                                <i class="fas fa-external-link-alt"></i> View Details
+                            </a>
+                            <a href="/incidents/${incident.id}/edit" class="dropdown-item">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item" onclick="resolveIncident('${incident.id}')">
+                                <i class="fas fa-check"></i> Resolve
+                            </button>
+                            <button class="dropdown-item text-danger" onclick="cancelIncident('${incident.id}')">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+
+    document.getElementById('total-count').textContent = totalItems;
+}
+
+function renderSLAStatus(incident) {
+    if (!incident.slaTargetResolution || incident.state === 'RESOLVED' || incident.state === 'CLOSED') {
+        return '<span class="sla-badge sla-na">N/A</span>';
+    }
+
+    const now = new Date();
+    const target = new Date(incident.slaTargetResolution);
+    const diff = target - now;
+    const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (diff < 0) {
+        const hoursBreached = Math.abs(hoursLeft);
+        return `<span class="sla-badge sla-breached"><i class="fas fa-exclamation-triangle"></i> Breached ${hoursBreached}h ago</span>`;
+    } else if (hoursLeft < 1) {
+        return `<span class="sla-badge sla-critical"><i class="fas fa-clock"></i> ${minutesLeft}m left</span>`;
+    } else if (hoursLeft < 4) {
+        return `<span class="sla-badge sla-warning"><i class="fas fa-clock"></i> ${hoursLeft}h ${minutesLeft}m left</span>`;
+    } else {
+        return `<span class="sla-badge sla-ok"><i class="fas fa-check-circle"></i> ${hoursLeft}h left</span>`;
+    }
+}
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/proxy/incidents/stats');
+
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            document.getElementById('stat-critical').textContent = data.data.critical || 0;
+            document.getElementById('stat-high').textContent = data.data.high || 0;
+            document.getElementById('stat-open').textContent = data.data.open || 0;
+            document.getElementById('stat-in-progress').textContent = data.data.inProgress || 0;
+            document.getElementById('stat-resolved-today').textContent = data.data.resolvedToday || 0;
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+function updatePagination(pagination) {
+    document.getElementById('current-page').textContent = pagination.page;
+    document.getElementById('total-pages').textContent = pagination.totalPages;
+    document.getElementById('prev-page').disabled = pagination.page <= 1;
+    document.getElementById('next-page').disabled = pagination.page >= pagination.totalPages;
+}
+
+function updateSortIndicators() {
+    document.querySelectorAll('.sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === sortField) {
+            th.classList.add('sort-' + sortOrder);
+        }
+    });
+}
+
+function clearFilters() {
+    filters = {};
+    document.getElementById('filter-search').value = '';
+    document.getElementById('filter-state').value = '';
+    document.getElementById('filter-priority').value = '';
+    document.getElementById('filter-category').value = '';
+    document.getElementById('filter-assigned').value = '';
+    document.getElementById('filter-date').value = '';
+    currentPage = 1;
+    loadIncidents();
+}
+
+function viewIncident(id) {
+    window.location.href = '/incidents/' + id;
+}
+
+async function quickView(id) {
+    const modal = document.getElementById('quick-view-modal');
+    modal.classList.add('active');
+
+    try {
+        const response = await fetch(`/api/proxy/incidents/${id}`);
+
+        const data = await response.json();
+
+        if (data.success) {
+            const incident = data.data;
+            document.getElementById('quick-view-title').textContent = incident.number + ' - Quick View';
+            document.getElementById('quick-view-link').href = '/incidents/' + id;
+            document.getElementById('quick-view-body').innerHTML = `
+                <div class="quick-view-content">
+                    <div class="quick-view-header">
+                        <span class="badge badge-priority badge-${incident.priority.toLowerCase()}">${incident.priority}</span>
+                        <span class="badge badge-state badge-${incident.state.toLowerCase().replace('_', '-')}">${formatState(incident.state)}</span>
+                    </div>
+                    <h4 class="quick-view-description">${escapeHtml(incident.shortDescription)}</h4>
+                    <div class="quick-view-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Created</span>
+                            <span class="meta-value">${formatDateTime(incident.createdAt)}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Category</span>
+                            <span class="meta-value">${incident.category || 'N/A'}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Assigned To</span>
+                            <span class="meta-value">${incident.assignedTo ? incident.assignedTo.firstName + ' ' + incident.assignedTo.lastName : 'Unassigned'}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Configuration Item</span>
+                            <span class="meta-value">${incident.configItem ? incident.configItem.name : 'None'}</span>
+                        </div>
+                    </div>
+                    <div class="quick-view-description-full">
+                        <h5>Description</h5>
+                        <p>${escapeHtml(incident.description || 'No description provided')}</p>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading incident details:', error);
+    }
+}
+
+function closeQuickView() {
+    document.getElementById('quick-view-modal').classList.remove('active');
+}
+
+async function assignIncident(id) {
+    // Open assignment modal - simplified for now
+    const assignee = prompt('Enter assignee email:');
+    if (assignee) {
+        try {
+            const response = await fetch(`/api/proxy/incidents/${id}/assign`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ assigneeEmail: assignee })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                showNotification('Incident assigned successfully', 'success');
+                loadIncidents();
+            } else {
+                showError(data.error || 'Failed to assign incident');
+            }
+        } catch (error) {
+            showError('Failed to assign incident');
+        }
+    }
+}
+
+async function resolveIncident(id) {
+    const notes = prompt('Enter resolution notes:');
+    if (notes) {
+        try {
+            const response = await fetch(`/api/proxy/incidents/${id}/resolve`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    resolutionNotes: notes,
+                    resolutionCode: 'Resolved'
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                showNotification('Incident resolved successfully', 'success');
+                loadIncidents();
+                loadStats();
+            } else {
+                showError(data.error || 'Failed to resolve incident');
+            }
+        } catch (error) {
+            showError('Failed to resolve incident');
+        }
+    }
+}
+
+function exportIncidents() {
+    const params = new URLSearchParams({
+        format: 'csv',
+        ...filters
+    });
+    window.location.href = `/api/proxy/incidents/export?${params}`;
+}
+
+// Utility functions
+function formatState(state) {
+    const states = {
+        'NEW': 'New',
+        'IN_PROGRESS': 'In Progress',
+        'ON_HOLD': 'On Hold',
+        'RESOLVED': 'Resolved',
+        'CLOSED': 'Closed',
+        'CANCELLED': 'Cancelled'
+    };
+    return states[state] || state;
+}
+
+function formatDateTime(dateStr) {
+    return new Date(dateStr).toLocaleString();
+}
+
+function formatRelativeTime(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return minutes + 'm ago';
+    if (hours < 24) return hours + 'h ago';
+    if (days < 7) return days + 'd ago';
+    return date.toLocaleDateString();
+}
+
+function getInitials(firstName, lastName) {
+    return (firstName?.charAt(0) || '') + (lastName?.charAt(0) || '');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function toggleDropdown(btn) {
+    const dropdown = btn.closest('.dropdown');
+    dropdown.classList.toggle('active');
+}
+
+function showNotification(message, type) {
+    // Use global notification system
+    if (window.showToast) {
+        window.showToast(message, type);
+    } else {
+        alert(message);
+    }
+}
+
+function showError(message) {
+    showNotification(message, 'error');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown.active').forEach(d => d.classList.remove('active'));
+    }
+});
+</script>
+{% endblock %}

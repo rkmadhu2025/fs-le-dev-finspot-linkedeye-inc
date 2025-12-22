@@ -1,0 +1,638 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Reports & Analytics - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Reports & Analytics</h1>
+        <p class="page-subtitle">Transform data into actionable insights</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="scheduleReport()">
+            <i class="fas fa-clock"></i> Schedule Report
+        </button>
+        <button class="btn btn-primary" onclick="createCustomReport()">
+            <i class="fas fa-plus"></i> Custom Report
+        </button>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="stats-grid stats-grid-4">
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-blue">
+            <i class="fas fa-ticket-alt"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-total-incidents">0</span>
+            <span class="stat-label">Total Incidents (MTD)</span>
+        </div>
+        <div class="stat-trend trend-up" id="trend-incidents">
+            <i class="fas fa-arrow-up"></i> <span>0%</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-green">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-mttr">0h</span>
+            <span class="stat-label">Avg Resolution Time</span>
+        </div>
+        <div class="stat-trend trend-down" id="trend-mttr">
+            <i class="fas fa-arrow-down"></i> <span>0%</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-purple">
+            <i class="fas fa-check-double"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-sla">0%</span>
+            <span class="stat-label">SLA Compliance</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-orange">
+            <i class="fas fa-user-check"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-first-call">0%</span>
+            <span class="stat-label">First Call Resolution</span>
+        </div>
+    </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="card">
+    <div class="card-body">
+        <div class="report-filters">
+            <div class="form-group">
+                <label class="form-label">Date Range</label>
+                <select class="form-select" id="date-range" onchange="updateDateRange()">
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month" selected>This Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="year">This Year</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+            <div class="form-group custom-dates" id="custom-dates" style="display: none;">
+                <label class="form-label">From</label>
+                <input type="date" class="form-input" id="date-from">
+            </div>
+            <div class="form-group custom-dates" id="custom-dates-to" style="display: none;">
+                <label class="form-label">To</label>
+                <input type="date" class="form-input" id="date-to">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Compare To</label>
+                <select class="form-select" id="compare-to">
+                    <option value="">No Comparison</option>
+                    <option value="previous">Previous Period</option>
+                    <option value="lastYear">Same Period Last Year</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="applyFilters()">
+                <i class="fas fa-sync-alt"></i> Apply
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="reports-grid">
+    <!-- Incident Trend -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-chart-line"></i> Incident Trend</h3>
+            <div class="card-header-actions">
+                <button class="btn btn-text btn-sm" onclick="exportChart('incident-trend')">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <canvas id="incident-trend-chart" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- Incidents by Priority -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-chart-pie"></i> By Priority</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="priority-chart" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- Incidents by Category -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-chart-bar"></i> By Category</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="category-chart" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- SLA Performance -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-tachometer-alt"></i> SLA Performance</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="sla-chart" height="250"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Team Performance -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-users"></i> Team Performance</h3>
+    </div>
+    <div class="card-body no-padding">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Assigned</th>
+                        <th>Resolved</th>
+                        <th>Avg Resolution Time</th>
+                        <th>SLA Met</th>
+                        <th>SLA Breached</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody id="team-performance-tbody">
+                    <tr class="loading-row">
+                        <td colspan="7">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pre-built Reports -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-file-alt"></i> Report Library</h3>
+    </div>
+    <div class="card-body">
+        <div class="reports-library">
+            <div class="report-card" onclick="runReport('executive-summary')">
+                <div class="report-icon"><i class="fas fa-briefcase"></i></div>
+                <div class="report-info">
+                    <h4>Executive Summary</h4>
+                    <p>High-level overview of IT operations performance</p>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-sm btn-secondary">Run</button>
+                </div>
+            </div>
+            <div class="report-card" onclick="runReport('sla-compliance')">
+                <div class="report-icon"><i class="fas fa-stopwatch"></i></div>
+                <div class="report-info">
+                    <h4>SLA Compliance Report</h4>
+                    <p>Detailed SLA metrics by priority and team</p>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-sm btn-secondary">Run</button>
+                </div>
+            </div>
+            <div class="report-card" onclick="runReport('incident-analysis')">
+                <div class="report-icon"><i class="fas fa-search-plus"></i></div>
+                <div class="report-info">
+                    <h4>Incident Analysis</h4>
+                    <p>Deep dive into incident patterns and trends</p>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-sm btn-secondary">Run</button>
+                </div>
+            </div>
+            <div class="report-card" onclick="runReport('change-success')">
+                <div class="report-icon"><i class="fas fa-exchange-alt"></i></div>
+                <div class="report-info">
+                    <h4>Change Success Rate</h4>
+                    <p>Change implementation success and failure analysis</p>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-sm btn-secondary">Run</button>
+                </div>
+            </div>
+            <div class="report-card" onclick="runReport('problem-effectiveness')">
+                <div class="report-icon"><i class="fas fa-bug"></i></div>
+                <div class="report-info">
+                    <h4>Problem Management Effectiveness</h4>
+                    <p>Impact of problem resolution on incident reduction</p>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-sm btn-secondary">Run</button>
+                </div>
+            </div>
+            <div class="report-card" onclick="runReport('asset-utilization')">
+                <div class="report-icon"><i class="fas fa-server"></i></div>
+                <div class="report-info">
+                    <h4>Asset Utilization</h4>
+                    <p>Infrastructure resource usage and capacity planning</p>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-sm btn-secondary">Run</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let charts = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadReportData();
+    initializeCharts();
+});
+
+async function loadReportData() {
+    try {
+        const response = await fetch('/api/proxy/reports/summary', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            updateStats(data.data);
+            updateCharts(data.data);
+            updateTeamPerformance(data.data.teamPerformance);
+        }
+    } catch (error) {
+        console.error('Error loading report data:', error);
+        // Use mock data
+        loadMockData();
+    }
+}
+
+function loadMockData() {
+    updateStats({
+        totalIncidents: 156,
+        incidentsTrend: 12,
+        avgResolutionTime: 4.2,
+        mttrTrend: -8,
+        slaCompliance: 94.5,
+        firstCallResolution: 67
+    });
+
+    updateCharts({
+        incidentTrend: [45, 52, 38, 41, 55, 48, 52, 44, 49, 56, 42, 47],
+        byPriority: { P1: 12, P2: 34, P3: 78, P4: 32 },
+        byCategory: {
+            'Infrastructure': 45,
+            'Network': 28,
+            'Database': 22,
+            'Application': 38,
+            'Security': 15,
+            'Access': 8
+        },
+        slaPerformance: { met: 147, breached: 9 }
+    });
+
+    updateTeamPerformance([
+        { name: 'Infrastructure Operations', assigned: 45, resolved: 42, avgTime: '3.2h', slaMet: 40, slaBreached: 2 },
+        { name: 'NOC', assigned: 38, resolved: 36, avgTime: '2.8h', slaMet: 35, slaBreached: 1 },
+        { name: 'Database Team', assigned: 22, resolved: 20, avgTime: '4.5h', slaMet: 18, slaBreached: 2 },
+        { name: 'Application Support', assigned: 51, resolved: 48, avgTime: '5.1h', slaMet: 44, slaBreached: 4 }
+    ]);
+}
+
+function updateStats(data) {
+    document.getElementById('stat-total-incidents').textContent = data.totalIncidents || 0;
+    document.getElementById('stat-mttr').textContent = (data.avgResolutionTime || 0).toFixed(1) + 'h';
+    document.getElementById('stat-sla').textContent = (data.slaCompliance || 0).toFixed(1) + '%';
+    document.getElementById('stat-first-call').textContent = (data.firstCallResolution || 0) + '%';
+
+    // Update trends
+    const incidentTrend = document.getElementById('trend-incidents');
+    if (data.incidentsTrend > 0) {
+        incidentTrend.className = 'stat-trend trend-up';
+        incidentTrend.innerHTML = `<i class="fas fa-arrow-up"></i> <span>${data.incidentsTrend}%</span>`;
+    } else {
+        incidentTrend.className = 'stat-trend trend-down';
+        incidentTrend.innerHTML = `<i class="fas fa-arrow-down"></i> <span>${Math.abs(data.incidentsTrend)}%</span>`;
+    }
+}
+
+function initializeCharts() {
+    // Incident Trend Chart
+    const trendCtx = document.getElementById('incident-trend-chart').getContext('2d');
+    charts.trend = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: [{
+                label: 'Incidents',
+                data: [],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.1)' }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // Priority Chart
+    const priorityCtx = document.getElementById('priority-chart').getContext('2d');
+    charts.priority = new Chart(priorityCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low'],
+            datasets: [{
+                data: [],
+                backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Category Chart
+    const categoryCtx = document.getElementById('category-chart').getContext('2d');
+    charts.category = new Chart(categoryCtx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Incidents',
+                data: [],
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.1)' }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // SLA Chart
+    const slaCtx = document.getElementById('sla-chart').getContext('2d');
+    charts.sla = new Chart(slaCtx, {
+        type: 'pie',
+        data: {
+            labels: ['SLA Met', 'SLA Breached'],
+            datasets: [{
+                data: [],
+                backgroundColor: ['#22c55e', '#ef4444']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+
+function updateCharts(data) {
+    // Update trend chart
+    if (data.incidentTrend) {
+        charts.trend.data.datasets[0].data = data.incidentTrend;
+        charts.trend.update();
+    }
+
+    // Update priority chart
+    if (data.byPriority) {
+        charts.priority.data.datasets[0].data = [
+            data.byPriority.P1 || 0,
+            data.byPriority.P2 || 0,
+            data.byPriority.P3 || 0,
+            data.byPriority.P4 || 0
+        ];
+        charts.priority.update();
+    }
+
+    // Update category chart
+    if (data.byCategory) {
+        charts.category.data.labels = Object.keys(data.byCategory);
+        charts.category.data.datasets[0].data = Object.values(data.byCategory);
+        charts.category.update();
+    }
+
+    // Update SLA chart
+    if (data.slaPerformance) {
+        charts.sla.data.datasets[0].data = [
+            data.slaPerformance.met || 0,
+            data.slaPerformance.breached || 0
+        ];
+        charts.sla.update();
+    }
+}
+
+function updateTeamPerformance(teams) {
+    const tbody = document.getElementById('team-performance-tbody');
+
+    if (!teams || teams.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = teams.map(team => {
+        const performance = team.slaMet / (team.slaMet + team.slaBreached) * 100;
+        return `
+            <tr>
+                <td><strong>${team.name}</strong></td>
+                <td>${team.assigned}</td>
+                <td>${team.resolved}</td>
+                <td>${team.avgTime}</td>
+                <td><span class="text-success">${team.slaMet}</span></td>
+                <td><span class="text-danger">${team.slaBreached}</span></td>
+                <td>
+                    <div class="performance-bar">
+                        <div class="performance-fill" style="width: ${performance}%"></div>
+                        <span class="performance-value">${performance.toFixed(0)}%</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function updateDateRange() {
+    const range = document.getElementById('date-range').value;
+    const customDates = document.querySelectorAll('.custom-dates');
+
+    if (range === 'custom') {
+        customDates.forEach(el => el.style.display = 'block');
+    } else {
+        customDates.forEach(el => el.style.display = 'none');
+    }
+}
+
+function applyFilters() {
+    loadReportData();
+}
+
+function runReport(reportType) {
+    window.location.href = `/reports/${reportType}`;
+}
+
+function scheduleReport() {
+    alert('Schedule report functionality coming soon');
+}
+
+function createCustomReport() {
+    window.location.href = '/reports/builder';
+}
+
+function exportChart(chartId) {
+    const canvas = document.getElementById(chartId + '-chart');
+    const link = document.createElement('a');
+    link.download = chartId + '-export.png';
+    link.href = canvas.toDataURL();
+    link.click();
+}
+
+function getToken() {
+    return localStorage.getItem('authToken') || '';
+}
+</script>
+
+<style>
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.report-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.report-filters .form-group {
+    margin-bottom: 0;
+}
+
+.reports-library {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.report-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.report-card:hover {
+    background: var(--bg-tertiary);
+    transform: translateX(4px);
+}
+
+.report-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-alpha);
+    color: var(--primary);
+    border-radius: var(--radius-md);
+    font-size: 1.25rem;
+}
+
+.report-info {
+    flex: 1;
+}
+
+.report-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.9375rem;
+}
+
+.report-info p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.performance-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.performance-bar .performance-fill {
+    flex: 1;
+    height: 8px;
+    background: var(--success);
+    border-radius: 4px;
+    max-width: 100px;
+}
+
+.performance-value {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

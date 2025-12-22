@@ -1,0 +1,78 @@
+{
+  "name": "linkedeye-finspot-backend",
+  "version": "1.0.0",
+  "description": "LinkedEye-FinSpot Enterprise ITSM & Incident Management Platform - Backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "seed": "node prisma/seed.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch --runInBand",
+    "test:coverage": "jest --coverage --runInBand",
+    "test:auth": "jest tests/auth.test.js --runInBand",
+    "test:incident": "jest tests/incident.test.js --runInBand",
+    "test:change": "jest tests/change.test.js --runInBand",
+    "test:problem": "jest tests/problem.test.js --runInBand",
+    "test:dashboard": "jest tests/dashboard.test.js --runInBand",
+    "test:user": "jest tests/user.test.js --runInBand",
+    "test:asset": "jest tests/asset.test.js --runInBand",
+    "test:team": "jest tests/team.test.js --runInBand",
+    "test:alert": "jest tests/alert.test.js --runInBand",
+    "test:report": "jest tests/report.test.js --runInBand",
+    "test:integration": "jest tests/integration.test.js --runInBand",
+    "test:webhook": "jest tests/webhook.test.js --runInBand"
+  },
+  "keywords": [
+    "itsm",
+    "incident-management",
+    "servicenow",
+    "enterprise",
+    "noc",
+    "sre",
+    "devops"
+  ],
+  "author": "LinkedEye-FinSpot Team",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.0",
+    "express-validator": "^7.2.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.0",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^7.0.11",
+    "pg": "^8.13.0",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.0",
+    "uuid": "^10.0.0",
+    "winston": "^3.15.0",
+    "axios": "^1.7.7",
+    "speakeasy": "^2.0.0",
+    "qrcode": "^1.5.4",
+    "exceljs": "^4.4.0",
+    "csv-parse": "^5.5.6",
+    "csv-stringify": "^6.5.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7",
+    "prisma": "^5.22.0",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Register | {{ app_name }}{% endblock %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block body %}
+<div class="auth-container">
+    <div class="auth-box">
+        <!-- Left Panel - Branding -->
+        <div class="auth-left">
+            <div class="auth-logo">
+                <div class="auth-logo-icon">LE</div>
+                <div class="auth-logo-text">
+                    LinkedEye<br>
+                    <span class="text-muted">FinSpot</span>
+                </div>
+            </div>
+
+            <h1 class="auth-heading">Join Our Enterprise Platform</h1>
+            <p class="auth-tagline">{{ app_tagline }}</p>
+
+            <div class="auth-features">
+                <div class="auth-feature">
+                    <div class="auth-feature-icon rot-run">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                    <div>
+                        <strong>RUN</strong>
+                        <p>Real-time incident management & monitoring</p>
+                    </div>
+                </div>
+
+                <div class="auth-feature">
+                    <div class="auth-feature-icon rot-operate">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <div>
+                        <strong>OPERATE</strong>
+                        <p>Change, problem & asset management</p>
+                    </div>
+                </div>
+
+                <div class="auth-feature">
+                    <div class="auth-feature-icon rot-transform">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div>
+                        <strong>TRANSFORM</strong>
+                        <p>AI insights & intelligent analytics</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Register Form -->
+        <div class="auth-right">
+            <h2 class="auth-title">Create Account</h2>
+            <p class="auth-subtitle">Register to request access to the platform</p>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('register') }}" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-row">
+                    <div class="form-group form-group-half">
+                        <label class="form-label">First Name</label>
+                        <div class="input-group">
+                            <span class="input-icon"><i class="fas fa-user"></i></span>
+                            <input type="text" name="first_name" class="form-control" placeholder="John" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="form-group form-group-half">
+                        <label class="form-label">Last Name</label>
+                        <div class="input-group">
+                            <span class="input-icon"><i class="fas fa-user"></i></span>
+                            <input type="text" name="last_name" class="form-control" placeholder="Doe" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <div class="input-group">
+                        <span class="input-icon"><i class="fas fa-envelope"></i></span>
+                        <input type="email" name="email" class="form-control" placeholder="you@company.com" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Department</label>
+                    <div class="input-group">
+                        <span class="input-icon"><i class="fas fa-building"></i></span>
+                        <input type="text" name="department" class="form-control" placeholder="IT Operations">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-icon"><i class="fas fa-lock"></i></span>
+                        <input type="password" name="password" class="form-control" placeholder="Create a password" required id="passwordInput">
+                        <button type="button" class="password-toggle" onclick="togglePassword('passwordInput', 'passwordToggleIcon')">
+                            <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                        </button>
+                    </div>
+                    <small class="form-hint">Minimum 8 characters with letters and numbers</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <div class="input-group">
+                        <span class="input-icon"><i class="fas fa-lock"></i></span>
+                        <input type="password" name="confirm_password" class="form-control" placeholder="Confirm your password" required id="confirmPasswordInput">
+                        <button type="button" class="password-toggle" onclick="togglePassword('confirmPasswordInput', 'confirmPasswordToggleIcon')">
+                            <i class="fas fa-eye" id="confirmPasswordToggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="terms" id="terms" class="checkbox" required>
+                    <label for="terms" class="checkbox-label">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-user-plus"></i>
+                    Create Account
+                </button>
+            </form>
+
+            <div class="divider">
+                <span>or register with</span>
+            </div>
+
+            <div class="social-login">
+                <button class="social-btn">
+                    <i class="fab fa-microsoft"></i>
+                    Azure AD
+                </button>
+                <button class="social-btn">
+                    <i class="fab fa-google"></i>
+                    Google
+                </button>
+            </div>
+
+            <p class="auth-link">
+                Already have an account? <a href="{{ url_for('login') }}">Sign In</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

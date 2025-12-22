@@ -1,0 +1,130 @@
+# LinkedEye-FinSpot Backend Deployment
+# Enterprise ITSM & Incident Management Platform
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkedeye-backend
+  namespace: linkedeye-finspot
+  labels:
+    app: linkedeye-backend
+    component: api
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: linkedeye-backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: linkedeye-backend
+        component: api
+        tier: backend
+    spec:
+      serviceAccountName: default
+      imagePullSecrets:
+      - name: gitlab-registry-secret
+      containers:
+        - name: backend
+          image: registry.gitlab.com/finspot-le-dev/fs-le-dev-finspot-incident-tool/backend:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: linkedeye-config
+            - secretRef:
+                name: linkedeye-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: logs
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: linkedeye-backend
+                topologyKey: kubernetes.io/hostname
+
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: linkedeye-backend-service
+  namespace: linkedeye-finspot
+  labels:
+    app: linkedeye-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: linkedeye-backend
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+      protocol: TCP
+
+---
+# Backend HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: linkedeye-backend-hpa
+  namespace: linkedeye-finspot
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: linkedeye-backend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

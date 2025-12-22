@@ -1,0 +1,484 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Operations Dashboard | {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-network-wired" style="color: var(--cyber-cyan, #00f5ff);"></i>
+            Network Operations Center
+        </h1>
+        <p class="page-subtitle">
+            Real-time infrastructure monitoring & incident management
+            <span class="refresh-indicator" id="lastUpdated">
+                <i class="fas fa-circle pulse"></i> Live
+            </span>
+        </p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary" id="autoRefreshToggle">
+            <i class="fas fa-sync-alt"></i> Auto-refresh: ON
+        </button>
+        <a href="{{ url_for('incident_create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Incident
+        </a>
+    </div>
+</div>
+
+<!-- Network Status Overview -->
+<div class="network-status-bar">
+    <div class="network-status-item">
+        <div class="status-indicator status-healthy"></div>
+        <span class="status-label">Network</span>
+        <span class="status-value">Operational</span>
+    </div>
+    <div class="network-status-item">
+        <div class="status-indicator status-healthy"></div>
+        <span class="status-label">Servers</span>
+        <span class="status-value">42/42 Online</span>
+    </div>
+    <div class="network-status-item">
+        <div class="status-indicator status-warning"></div>
+        <span class="status-label">Services</span>
+        <span class="status-value">38/40 Healthy</span>
+    </div>
+    <div class="network-status-item">
+        <div class="status-indicator status-healthy"></div>
+        <span class="status-label">Database</span>
+        <span class="status-value">Optimal</span>
+    </div>
+    <div class="network-status-item">
+        <div class="status-indicator status-healthy"></div>
+        <span class="status-label">Latency</span>
+        <span class="status-value">12ms avg</span>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="stats-grid">
+    <div class="stat-card danger">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-fire"></i>
+            </div>
+            <span class="stat-title">Critical (P1)</span>
+        </div>
+        <div class="stat-value" id="kpi-critical">{{ kpis.criticalIncidents.value|default(0) }}</div>
+        <div class="stat-change {% if kpis.criticalIncidents.trend == 'down' %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{{ kpis.criticalIncidents.trend|default('right') }}"></i>
+            <span>{{ kpis.criticalIncidents.change|default(0)|abs }} from yesterday</span>
+        </div>
+    </div>
+
+    <div class="stat-card warning">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <span class="stat-title">Open Incidents</span>
+        </div>
+        <div class="stat-value" id="kpi-open">{{ kpis.openIncidents.value|default(0) }}</div>
+        <div class="stat-change {% if kpis.openIncidents.trend == 'down' %}positive{% else %}negative{% endif %}">
+            <i class="fas fa-arrow-{{ kpis.openIncidents.trend|default('right') }}"></i>
+            <span>{{ kpis.openIncidents.change|default(0)|abs }} from yesterday</span>
+        </div>
+    </div>
+
+    <div class="stat-card success">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <span class="stat-title">Resolved Today</span>
+        </div>
+        <div class="stat-value" id="kpi-resolved">{{ kpis.resolvedToday.value|default(0) }}</div>
+        <div class="stat-change positive">
+            <i class="fas fa-trophy"></i>
+            <span>Keep it up!</span>
+        </div>
+    </div>
+
+    <div class="stat-card info">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <span class="stat-title">MTTR</span>
+        </div>
+        <div class="stat-value" id="kpi-mttr">{{ kpis.mttr.formatted|default('0m') }}</div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-down"></i>
+            <span>15% improvement</span>
+        </div>
+    </div>
+
+    <div class="stat-card primary">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-bell"></i>
+            </div>
+            <span class="stat-title">Active Alerts</span>
+        </div>
+        <div class="stat-value" id="kpi-alerts">{{ kpis.activeAlerts.value|default(0) }}</div>
+        <div class="stat-footer">
+            <a href="#">View all alerts <i class="fas fa-arrow-right"></i></a>
+        </div>
+    </div>
+</div>
+
+<!-- Network Topology Mini View -->
+<div class="card network-topology-card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-project-diagram"></i>
+            Network Topology
+        </h3>
+        <a href="{{ url_for('network_topology') }}" class="btn btn-text">Full View <i class="fas fa-expand"></i></a>
+    </div>
+    <div class="card-body">
+        <div class="topology-mini">
+            <div class="topology-layer">
+                <div class="topology-node core" data-status="healthy">
+                    <i class="fas fa-server"></i>
+                    <span>Sristra Core</span>
+                </div>
+            </div>
+            <div class="topology-connections">
+                <div class="connection-line"></div>
+                <div class="connection-line"></div>
+                <div class="connection-line"></div>
+            </div>
+            <div class="topology-layer">
+                <div class="topology-node" data-status="healthy">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Monitoring</span>
+                </div>
+                <div class="topology-node" data-status="healthy">
+                    <i class="fas fa-robot"></i>
+                    <span>Automating</span>
+                </div>
+                <div class="topology-node" data-status="warning">
+                    <i class="fas fa-database"></i>
+                    <span>Data Store</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+    <a href="{{ url_for('incident_create') }}" class="action-card">
+        <div class="action-icon" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);">
+            <i class="fas fa-exclamation-triangle" style="color: #dc2626;"></i>
+        </div>
+        <div class="action-title">New Incident</div>
+        <div class="action-description">Report network issue</div>
+    </a>
+
+    <a href="{{ url_for('network_topology') }}" class="action-card">
+        <div class="action-icon" style="background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);">
+            <i class="fas fa-network-wired" style="color: #0891b2;"></i>
+        </div>
+        <div class="action-title">Network Map</div>
+        <div class="action-description">View topology</div>
+    </a>
+
+    <a href="{{ url_for('reports') }}" class="action-card">
+        <div class="action-icon" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);">
+            <i class="fas fa-chart-area" style="color: #2563eb;"></i>
+        </div>
+        <div class="action-title">Analytics</div>
+        <div class="action-description">Performance metrics</div>
+    </a>
+
+    <a href="{{ url_for('integrations') }}" class="action-card">
+        <div class="action-icon" style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);">
+            <i class="fas fa-plug" style="color: #7c3aed;"></i>
+        </div>
+        <div class="action-title">Integrations</div>
+        <div class="action-description">Prometheus, Grafana</div>
+    </a>
+</div>
+
+<!-- Main Content Grid -->
+<div class="dashboard-grid">
+    <!-- Incident Trend Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-line"></i>
+                Incident Trend (7 Days)
+            </h3>
+            <div class="card-actions">
+                <select class="filter-select" id="trendPeriod">
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <canvas id="incidentTrendChart" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- SLA Compliance -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-bullseye"></i>
+                SLA Compliance
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="sla-gauge-container">
+                <div class="sla-gauge">
+                    <canvas id="slaGauge" width="200" height="200"></canvas>
+                    <div class="sla-gauge-value">94.2%</div>
+                </div>
+                <div class="sla-breakdown">
+                    <div class="sla-item">
+                        <span class="sla-label">Response SLA</span>
+                        <div class="sla-bar">
+                            <div class="sla-bar-fill" style="width: 98%;"></div>
+                        </div>
+                        <span class="sla-value success">98%</span>
+                    </div>
+                    <div class="sla-item">
+                        <span class="sla-label">Resolution SLA</span>
+                        <div class="sla-bar">
+                            <div class="sla-bar-fill" style="width: 91%;"></div>
+                        </div>
+                        <span class="sla-value warning">91%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Incidents -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-list"></i>
+                Recent Incidents
+            </h3>
+            <a href="{{ url_for('incidents_list') }}" class="btn btn-text">View All</a>
+        </div>
+        <div class="card-body no-padding">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Number</th>
+                        <th>Description</th>
+                        <th>Priority</th>
+                        <th>State</th>
+                        <th>Assigned To</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if dashboard_data.recentIncidents %}
+                        {% for incident in dashboard_data.recentIncidents[:5] %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('incident_detail', incident_id=incident.id) }}" class="table-link">
+                                    {{ incident.number }}
+                                </a>
+                            </td>
+                            <td class="truncate">{{ incident.shortDescription }}</td>
+                            <td>
+                                <span class="badge badge-{{ 'critical' if incident.priority == 'P1' else 'high' if incident.priority == 'P2' else 'medium' if incident.priority == 'P3' else 'low' }}">
+                                    {{ incident.priority }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ 'new' if incident.state == 'NEW' else 'in-progress' if incident.state == 'IN_PROGRESS' else 'resolved' if incident.state == 'RESOLVED' else 'closed' }}">
+                                    {{ incident.state|replace('_', ' ') }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if incident.assignedTo %}
+                                    {{ incident.assignedTo.firstName }} {{ incident.assignedTo.lastName }}
+                                {% else %}
+                                    <span class="text-muted">Unassigned</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No recent incidents</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-stream"></i>
+                Activity Feed
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="activity-feed" id="activityFeed">
+                {% if dashboard_data.recentActivities %}
+                    {% for activity in dashboard_data.recentActivities[:10] %}
+                    <div class="activity-item">
+                        <div class="activity-icon {{ activity.action|lower }}">
+                            <i class="fas fa-{% if activity.action == 'CREATED' %}plus{% elif activity.action == 'UPDATED' %}edit{% elif activity.action == 'RESOLVED' %}check{% elif activity.action == 'ASSIGNED' %}user{% else %}circle{% endif %}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-text">
+                                {% if activity.incident %}
+                                <a href="{{ url_for('incident_detail', incident_id=activity.incident.id) }}">{{ activity.incident.number }}</a>
+                                {% endif %}
+                                {{ activity.description }}
+                            </div>
+                            <div class="activity-time">{{ activity.createdAt }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted">No recent activity</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
+<script>
+// Incident Trend Chart
+const trendCtx = document.getElementById('incidentTrendChart').getContext('2d');
+const trendChart = new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [
+            {
+                label: 'P1 Critical',
+                data: [2, 3, 1, 4, 2, 1, 3],
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                fill: true,
+                tension: 0.4
+            },
+            {
+                label: 'P2 High',
+                data: [8, 12, 10, 15, 8, 5, 9],
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                fill: true,
+                tension: 0.4
+            },
+            {
+                label: 'P3 Medium',
+                data: [15, 18, 22, 19, 16, 10, 14],
+                borderColor: '#0ea5e9',
+                backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                fill: true,
+                tension: 0.4
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+
+// SLA Gauge
+const gaugeCtx = document.getElementById('slaGauge').getContext('2d');
+new Chart(gaugeCtx, {
+    type: 'doughnut',
+    data: {
+        datasets: [{
+            data: [94.2, 5.8],
+            backgroundColor: ['#22c55e', '#e5e7eb'],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        cutout: '75%',
+        rotation: -90,
+        circumference: 180,
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+        }
+    }
+});
+
+// Auto-refresh toggle
+let autoRefresh = true;
+let refreshInterval;
+
+document.getElementById('autoRefreshToggle').addEventListener('click', function() {
+    autoRefresh = !autoRefresh;
+    this.innerHTML = autoRefresh
+        ? '<i class="fas fa-sync-alt"></i> Auto-refresh: ON'
+        : '<i class="fas fa-sync-alt"></i> Auto-refresh: OFF';
+
+    if (autoRefresh) {
+        startAutoRefresh();
+    } else {
+        clearInterval(refreshInterval);
+    }
+});
+
+function startAutoRefresh() {
+    refreshInterval = setInterval(refreshStats, 30000);
+}
+
+function refreshStats() {
+    // Refresh KPIs
+    fetch('/api/proxy/dashboard/kpis', {
+        headers: {
+            'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('kpi-critical').textContent = data.data.criticalIncidents?.value || 0;
+                document.getElementById('kpi-open').textContent = data.data.openIncidents?.value || 0;
+                document.getElementById('kpi-resolved').textContent = data.data.resolvedToday?.value || 0;
+                document.getElementById('kpi-mttr').textContent = data.data.mttr?.formatted || '0m';
+                document.getElementById('kpi-alerts').textContent = data.data.activeAlerts?.value || 0;
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing stats:', error);
+        });
+}
+
+// Start auto-refresh on page load
+startAutoRefresh();
+</script>
+{% endblock %}

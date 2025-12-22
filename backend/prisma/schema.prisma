@@ -1,0 +1,552 @@
+// LinkedEye-FinSpot Database Schema
+// Enterprise ITSM & Incident Management Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Connection to postgresql-leadmin namespace in K8s cluster
+  // postgresql-leadmin-service.postgresql-leadmin.svc.cluster.local:5432
+}
+
+// USER & AUTHENTICATION
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String?
+  firstName         String
+  lastName          String
+  phone             String?
+  avatar            String?
+  role              String    @default("OPERATOR")
+  status            String    @default("ACTIVE")
+  department        String?
+  jobTitle          String?
+  timezone          String    @default("Asia/Kolkata")
+  mfaEnabled        Boolean   @default(false)
+  mfaSecret         String?
+  lastLogin         DateTime?
+  loginAttempts     Int       @default(0)
+  lockedUntil       DateTime?
+  passwordChangedAt DateTime?
+  ssoProvider       String?
+  ssoId             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  teams             TeamMember[]
+  assignedIncidents Incident[]    @relation("AssignedTo")
+  createdIncidents  Incident[]    @relation("CreatedBy")
+  assignedChanges   Change[]      @relation("ChangeAssignedTo")
+  createdChanges    Change[]      @relation("ChangeCreatedBy")
+  assignedProblems  Problem[]     @relation("ProblemAssignedTo")
+  createdProblems   Problem[]     @relation("ProblemCreatedBy")
+  workNotes         WorkNote[]
+  approvals         Approval[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  onCallSchedules   OnCallSchedule[]
+  sessions          Session[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// TEAMS & GROUPS
+model Team {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  description      String?
+  email            String?
+  slackChannel     String?
+  managerId        String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  members          TeamMember[]
+  assignedIncidents Incident[]
+  assignedChanges  Change[]
+  assignedProblems Problem[]
+  onCallSchedules  OnCallSchedule[]
+  escalationPolicies EscalationPolicy[]
+}
+
+model TeamMember {
+  id       String   @id @default(uuid())
+  teamId   String
+  userId   String
+  role     String   @default("MEMBER")
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([teamId, userId])
+}
+
+// INCIDENTS (RUN)
+model Incident {
+  id                  String   @id @default(uuid())
+  number              String   @unique
+  shortDescription    String
+  description         String?
+  state               String   @default("NEW")
+  impact              String   @default("MEDIUM")
+  urgency             String   @default("MEDIUM")
+  priority            String   @default("P3")
+  category            String?
+  subcategory         String?
+  assignedToId        String?
+  assignmentGroupId   String?
+  createdById         String
+  configItemId        String?
+  slaBreached         Boolean  @default(false)
+  responseTime        DateTime?
+  resolutionTime      DateTime?
+  slaTargetResponse   DateTime?
+  slaTargetResolution DateTime?
+  source              String   @default("MANUAL")
+  sourceAlertId       String?
+  sourceAlertName     String?
+  resolvedAt          DateTime?
+  closedAt            DateTime?
+  resolutionCode      String?
+  resolutionNotes     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  assignedTo          User?    @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignmentGroup     Team?    @relation(fields: [assignmentGroupId], references: [id])
+  createdBy           User     @relation("CreatedBy", fields: [createdById], references: [id])
+  configItem          ConfigurationItem? @relation(fields: [configItemId], references: [id])
+  workNotes           WorkNote[]
+  relatedAlerts       Alert[]
+  attachments         Attachment[]
+  activities          Activity[]
+  linkedChanges       IncidentChange[]
+  linkedProblems      IncidentProblem[]
+}
+
+// CHANGES (OPERATE)
+model Change {
+  id                 String   @id @default(uuid())
+  number             String   @unique
+  shortDescription   String
+  description        String?
+  type               String   @default("NORMAL")
+  state              String   @default("NEW")
+  riskLevel          String   @default("MEDIUM")
+  category           String?
+  assignedToId       String?
+  assignmentGroupId  String?
+  createdById        String
+  justification      String?
+  implementationPlan String?
+  rollbackPlan       String?
+  testPlan           String?
+  communicationPlan  String?
+  plannedStartDate   DateTime?
+  plannedEndDate     DateTime?
+  actualStartDate    DateTime?
+  actualEndDate      DateTime?
+  affectedServices   String?
+  downtime           Int?
+  userImpact         String?
+  gitRepoUrl         String?
+  gitBranch          String?
+  gitCommitHash      String?
+  pullRequestUrl     String?
+  reviewNotes        String?
+  closureCode        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  assignedTo         User?    @relation("ChangeAssignedTo", fields: [assignedToId], references: [id])
+  assignmentGroup    Team?    @relation(fields: [assignmentGroupId], references: [id])
+  createdBy          User     @relation("ChangeCreatedBy", fields: [createdById], references: [id])
+  approvals          Approval[]
+  affectedCIs        ChangeCI[]
+  workNotes          WorkNote[]
+  attachments        Attachment[]
+  activities         Activity[]
+  linkedIncidents    IncidentChange[]
+}
+
+model Approval {
+  id         String    @id @default(uuid())
+  changeId   String
+  approverId String
+  state      String    @default("PENDING")
+  comments   String?
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  change     Change    @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  approver   User      @relation(fields: [approverId], references: [id])
+}
+
+// PROBLEMS (OPERATE)
+model Problem {
+  id                  String   @id @default(uuid())
+  number              String   @unique
+  shortDescription    String
+  description         String?
+  state               String   @default("NEW")
+  priority            String   @default("P3")
+  category            String?
+  assignedToId        String?
+  assignmentGroupId   String?
+  createdById         String
+  rootCause           String?
+  rootCauseAnalysis   String?
+  workaround          String?
+  workaroundEffective Boolean  @default(false)
+  permanentFix        String?
+  fixImplemented      Boolean  @default(false)
+  relatedChangeId     String?
+  isKnownError        Boolean  @default(false)
+  knownErrorId        String?
+  resolvedAt          DateTime?
+  closedAt            DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  assignedTo          User?    @relation("ProblemAssignedTo", fields: [assignedToId], references: [id])
+  assignmentGroup     Team?    @relation(fields: [assignmentGroupId], references: [id])
+  createdBy           User     @relation("ProblemCreatedBy", fields: [createdById], references: [id])
+  workNotes           WorkNote[]
+  attachments         Attachment[]
+  activities          Activity[]
+  linkedIncidents     IncidentProblem[]
+}
+
+// ASSETS & CMDB
+model ConfigurationItem {
+  id                String   @id @default(uuid())
+  name              String
+  type              String
+  status            String   @default("LIVE")
+  category          String?
+  subcategory       String?
+  description       String?
+  serialNumber      String?
+  assetTag          String?
+  manufacturer      String?
+  model             String?
+  version           String?
+  location          String?
+  rackPosition      String?
+  dataCenter        String?
+  ipAddress         String?
+  macAddress        String?
+  hostname          String?
+  fqdn              String?
+  cpu               String?
+  memory            String?
+  storage           String?
+  os                String?
+  osVersion         String?
+  ownerId           String?
+  supportGroupId    String?
+  vendor            String?
+  purchaseDate      DateTime?
+  warrantyExpiry    DateTime?
+  endOfLife         DateTime?
+  endOfSupport      DateTime?
+  purchaseCost      Float?
+  monthlyCost       Float?
+  costCenter        String?
+  monitoringEnabled Boolean  @default(true)
+  prometheusJob     String?
+  grafanaDashboard  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  incidents         Incident[]
+  changes           ChangeCI[]
+  alerts            Alert[]
+  activities        Activity[]
+}
+
+// ALERTS
+model Alert {
+  id             String    @id @default(uuid())
+  alertId        String    @unique
+  name           String
+  severity       String    @default("WARNING")
+  status         String    @default("FIRING")
+  source         String
+  description    String?
+  metric         String?
+  currentValue   String?
+  threshold      String?
+  labels         String?
+  annotations    String?
+  configItemId   String?
+  incidentId     String?
+  firedAt        DateTime
+  resolvedAt     DateTime?
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+  createdAt      DateTime  @default(now())
+  configItem     ConfigurationItem? @relation(fields: [configItemId], references: [id])
+  incident       Incident? @relation(fields: [incidentId], references: [id])
+}
+
+// ON-CALL & ESCALATION
+model OnCallSchedule {
+  id        String   @id @default(uuid())
+  teamId    String
+  userId    String
+  startTime DateTime
+  endTime   DateTime
+  isPrimary Boolean  @default(true)
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model EscalationPolicy {
+  id          String   @id @default(uuid())
+  teamId      String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  team        Team     @relation(fields: [teamId], references: [id])
+  rules       EscalationRule[]
+}
+
+model EscalationRule {
+  id                 String           @id @default(uuid())
+  escalationPolicyId String
+  level              Int
+  delayMinutes       Int
+  notifyType         String
+  notifyTargets      String
+  createdAt          DateTime         @default(now())
+  policy             EscalationPolicy @relation(fields: [escalationPolicyId], references: [id], onDelete: Cascade)
+}
+
+// WORK NOTES & ACTIVITIES
+model WorkNote {
+  id         String    @id @default(uuid())
+  content    String
+  isInternal Boolean   @default(false)
+  authorId   String
+  incidentId String?
+  changeId   String?
+  problemId  String?
+  createdAt  DateTime  @default(now())
+  author     User      @relation(fields: [authorId], references: [id])
+  incident   Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  change     Change?   @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  problem    Problem?  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+}
+
+model Activity {
+  id           String             @id @default(uuid())
+  action       String
+  description  String
+  oldValue     String?
+  newValue     String?
+  userId       String?
+  incidentId   String?
+  changeId     String?
+  problemId    String?
+  configItemId String?
+  createdAt    DateTime           @default(now())
+  incident     Incident?          @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  change       Change?            @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  problem      Problem?           @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  configItem   ConfigurationItem? @relation(fields: [configItemId], references: [id], onDelete: Cascade)
+}
+
+model Attachment {
+  id           String    @id @default(uuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  incidentId   String?
+  changeId     String?
+  problemId    String?
+  uploadedBy   String
+  createdAt    DateTime  @default(now())
+  incident     Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  change       Change?   @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  problem      Problem?  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+}
+
+model ChangeCI {
+  id           String            @id @default(uuid())
+  changeId     String
+  configItemId String
+  impactType   String?
+  change       Change            @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  configItem   ConfigurationItem @relation(fields: [configItemId], references: [id], onDelete: Cascade)
+  @@unique([changeId, configItemId])
+}
+
+// INCIDENT LINKING - Links incidents to changes and problems
+model IncidentChange {
+  id         String   @id @default(uuid())
+  incidentId String
+  changeId   String
+  linkType   String?  // e.g., "CAUSED_BY", "RESOLVED_BY", "RELATED"
+  notes      String?
+  linkedById String?
+  createdAt  DateTime @default(now())
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  change     Change   @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  @@unique([incidentId, changeId])
+}
+
+model IncidentProblem {
+  id         String   @id @default(uuid())
+  incidentId String
+  problemId  String
+  linkType   String?  // e.g., "CAUSED_BY", "RELATED", "SYMPTOM_OF"
+  notes      String?
+  linkedById String?
+  createdAt  DateTime @default(now())
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  problem    Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  @@unique([incidentId, problemId])
+}
+
+// NOTIFICATIONS & AUDIT
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  oldData    String?
+  newData    String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}
+
+// INTEGRATIONS
+model Integration {
+  id           String               @id @default(uuid())
+  name         String
+  type         String
+  status       String               @default("INACTIVE")
+  config       String
+  lastSyncAt   DateTime?
+  syncStatus   String?
+  errorMessage String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  webhooks     IntegrationWebhook[]
+}
+
+model IntegrationWebhook {
+  id            String      @id @default(uuid())
+  integrationId String
+  name          String
+  url           String
+  secret        String?
+  events        String
+  isActive      Boolean     @default(true)
+  lastTriggered DateTime?
+  createdAt     DateTime    @default(now())
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+}
+
+// SLA DEFINITIONS
+model SLADefinition {
+  id                    String   @id @default(uuid())
+  name                  String
+  priority              String   @unique
+  responseTimeMinutes   Int
+  resolutionTimeMinutes Int
+  businessHoursOnly     Boolean  @default(true)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// PASSWORD RESET TOKENS
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// EMAIL NOTIFICATION QUEUE
+model EmailQueue {
+  id          String    @id @default(uuid())
+  to          String
+  subject     String
+  body        String
+  templateId  String?
+  templateData String?
+  status      String    @default("PENDING") // PENDING, SENT, FAILED
+  priority    Int       @default(0)
+  attempts    Int       @default(0)
+  lastError   String?
+  sentAt      DateTime?
+  scheduledAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+// SCHEDULED JOBS TRACKING
+model ScheduledJob {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  cronPattern String
+  isActive    Boolean   @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  lastStatus  String?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// SLACK INTEGRATION
+model SlackIntegration {
+  id            String   @id @default(uuid())
+  teamId        String?
+  workspaceId   String?
+  workspaceName String?
+  botToken      String?
+  accessToken   String?
+  channelId     String?
+  channelName   String?
+  webhookUrl    String?
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

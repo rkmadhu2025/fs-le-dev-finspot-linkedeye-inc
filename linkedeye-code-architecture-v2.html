@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedEye-FinSpot | Code-Level Architecture v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e14;
+            --bg-card: #12171f;
+            --bg-elevated: #1a2030;
+            --bg-code: #0d1117;
+            --accent-cyan: #00d4ff;
+            --accent-purple: #a855f7;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --accent-red: #ef4444;
+            --accent-pink: #ec4899;
+            --accent-blue: #3b82f6;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #2d3748;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .container { max-width: 1900px; margin: 0 auto; padding: 1.5rem; }
+        
+        header { text-align: center; padding: 2rem 0 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+        .logo { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.5rem; }
+        .logo-icon { width: 60px; height: 60px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 800; }
+        h1 { font-size: 2rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: var(--text-muted); font-family: 'Fira Code', monospace; font-size: 0.9rem; }
+        
+        .tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; margin-bottom: 1.5rem; padding: 0.75rem; background: var(--bg-card); border-radius: 12px; }
+        .tab { padding: 0.6rem 1rem; background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--text-muted); cursor: pointer; font-family: 'Fira Code', monospace; font-size: 0.8rem; transition: all 0.2s; }
+        .tab:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+        .tab.active { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); color: white; }
+        
+        .panel { display: none; }
+        .panel.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .section-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .section-title::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple)); border-radius: 2px; }
+        
+        .card { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); padding: 1.25rem; margin-bottom: 1rem; }
+        .card:hover { border-color: rgba(0, 212, 255, 0.3); }
+        .card-title { font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+        
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        @media (max-width: 1200px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+        
+        /* Code blocks */
+        .code { background: var(--bg-code); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
+        .code-header { background: var(--bg-elevated); padding: 0.5rem 0.75rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .code-file { font-family: 'Fira Code', monospace; font-size: 0.75rem; color: var(--text-muted); }
+        .code-lang { font-size: 0.65rem; padding: 0.15rem 0.4rem; background: var(--accent-cyan); color: #000; border-radius: 4px; font-weight: 600; }
+        .code-body { padding: 0.75rem; font-family: 'Fira Code', monospace; font-size: 0.7rem; overflow-x: auto; line-height: 1.6; }
+        .c-comment { color: #6a737d; }
+        .c-keyword { color: var(--accent-pink); }
+        .c-string { color: var(--accent-green); }
+        .c-func { color: var(--accent-cyan); }
+        .c-var { color: var(--accent-orange); }
+        .c-type { color: var(--accent-purple); }
+        
+        /* Function list */
+        .func-list { display: grid; gap: 0.4rem; }
+        .func-item { background: var(--bg-code); border-radius: 6px; padding: 0.5rem 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-family: 'Fira Code', monospace; font-size: 0.75rem; }
+        .func-method { padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; }
+        .method-get { background: var(--accent-green); color: #000; }
+        .method-post { background: var(--accent-blue); color: #fff; }
+        .method-put { background: var(--accent-orange); color: #000; }
+        .method-del { background: var(--accent-red); color: #fff; }
+        .func-name { color: var(--accent-cyan); }
+        .func-desc { color: var(--text-muted); font-size: 0.7rem; margin-left: auto; }
+        
+        /* Flow diagram */
+        .flow { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 1rem 0; }
+        .flow-node { background: var(--bg-elevated); border-radius: 10px; padding: 0.75rem 1rem; text-align: center; border: 1px solid var(--border); min-width: 120px; position: relative; }
+        .flow-node::after { content: '→'; position: absolute; right: -18px; top: 50%; transform: translateY(-50%); color: var(--accent-green); font-size: 1.2rem; }
+        .flow-node:last-child::after { display: none; }
+        .flow-icon { font-size: 1.25rem; margin-bottom: 0.25rem; }
+        .flow-name { font-weight: 600; font-size: 0.85rem; }
+        .flow-detail { font-size: 0.7rem; color: var(--text-muted); font-family: 'Fira Code', monospace; }
+        
+        /* Permission matrix */
+        .perm-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        .perm-table th, .perm-table td { padding: 0.5rem; border: 1px solid var(--border); text-align: center; }
+        .perm-table th { background: var(--bg-elevated); color: var(--accent-cyan); font-family: 'Fira Code', monospace; }
+        .perm-table td:first-child { text-align: left; font-weight: 600; }
+        .perm-yes { color: var(--accent-green); }
+        .perm-no { color: var(--accent-red); }
+        
+        /* Priority matrix */
+        .priority-grid { display: grid; grid-template-columns: auto repeat(4, 1fr); gap: 2px; font-size: 0.75rem; }
+        .priority-cell { padding: 0.5rem; text-align: center; background: var(--bg-elevated); }
+        .priority-header { background: var(--bg-code); color: var(--accent-cyan); font-weight: 600; }
+        .priority-p1 { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); font-weight: 700; }
+        .priority-p2 { background: rgba(249, 115, 22, 0.2); color: var(--accent-orange); font-weight: 700; }
+        .priority-p3 { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+        .priority-p4 { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        
+        /* SLA table */
+        .sla-table { width: 100%; font-size: 0.8rem; }
+        .sla-table th, .sla-table td { padding: 0.6rem; border: 1px solid var(--border); }
+        .sla-table th { background: var(--bg-elevated); }
+        .sla-p1 { background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--accent-red); }
+        .sla-p2 { background: rgba(249, 115, 22, 0.1); border-left: 3px solid var(--accent-orange); }
+        .sla-p3 { background: rgba(234, 179, 8, 0.1); border-left: 3px solid #eab308; }
+        .sla-p4 { background: rgba(34, 197, 94, 0.1); border-left: 3px solid var(--accent-green); }
+        
+        /* WebSocket events */
+        .ws-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+        .ws-category { background: var(--bg-card); border-radius: 10px; padding: 1rem; border: 1px solid var(--border); }
+        .ws-title { font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+        .ws-event { background: var(--bg-code); border-radius: 6px; padding: 0.4rem 0.6rem; margin-bottom: 0.35rem; display: flex; justify-content: space-between; align-items: center; }
+        .ws-name { font-family: 'Fira Code', monospace; font-size: 0.75rem; color: var(--accent-cyan); }
+        .ws-dir { font-size: 0.6rem; padding: 0.1rem 0.3rem; border-radius: 3px; }
+        .dir-emit { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        .dir-on { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+        
+        /* State machine */
+        .state-diagram { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 1rem; background: var(--bg-code); border-radius: 8px; }
+        .state-node { background: var(--bg-elevated); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.8rem; font-weight: 600; border: 2px solid var(--border); }
+        .state-new { border-color: var(--accent-blue); color: var(--accent-blue); }
+        .state-progress { border-color: var(--accent-orange); color: var(--accent-orange); }
+        .state-hold { border-color: var(--accent-purple); color: var(--accent-purple); }
+        .state-resolved { border-color: var(--accent-green); color: var(--accent-green); }
+        .state-closed { border-color: var(--text-muted); color: var(--text-muted); }
+        .state-arrow { color: var(--accent-cyan); font-size: 1.2rem; }
+        
+        /* Integration hub */
+        .hub-grid { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 1.5rem; align-items: start; }
+        @media (max-width: 1100px) { .hub-grid { grid-template-columns: 1fr; } }
+        .hub-center { background: var(--bg-card); border-radius: 16px; padding: 1.5rem; text-align: center; border: 2px solid var(--accent-cyan); }
+        .hub-logo { width: 80px; height: 80px; margin: 0 auto 1rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; }
+        .hub-name { font-size: 1.25rem; font-weight: 700; }
+        .int-item { background: var(--bg-card); border-radius: 10px; padding: 0.75rem; border: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; transition: all 0.2s; }
+        .int-item:hover { border-color: var(--accent-cyan); transform: translateX(3px); }
+        .int-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .int-name { font-weight: 600; font-size: 0.85rem; }
+        .int-desc { font-size: 0.7rem; color: var(--text-muted); font-family: 'Fira Code', monospace; }
+        .int-status { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); margin-left: auto; }
+        
+        /* Model schema */
+        .model-card { background: var(--bg-card); border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
+        .model-header { background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(0, 212, 255, 0.1)); padding: 0.6rem 0.75rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border); }
+        .model-name { font-family: 'Fira Code', monospace; font-weight: 600; font-size: 0.9rem; }
+        .model-fields { padding: 0.6rem 0.75rem; font-family: 'Fira Code', monospace; font-size: 0.7rem; }
+        .field-row { display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .field-row:last-child { border-bottom: none; }
+        .field-pk { color: var(--accent-orange); }
+        .field-fk { color: var(--accent-purple); }
+        .field-type { color: var(--accent-cyan); }
+        .model-rels { padding: 0.5rem 0.75rem; background: var(--bg-code); border-top: 1px solid var(--border); font-size: 0.65rem; }
+        .rel-item { color: var(--text-muted); padding: 0.15rem 0; }
+        .rel-arrow { color: var(--accent-green); }
+        
+        footer { margin-top: 2rem; padding: 1.5rem; text-align: center; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">LE</div>
+                <div>
+                    <h1>LinkedEye-FinSpot</h1>
+                    <p class="subtitle">Code-Level Architecture Documentation v2.0</p>
+                </div>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" onclick="show('api')">📡 API Routes</button>
+            <button class="tab" onclick="show('auth')">🔐 Auth System</button>
+            <button class="tab" onclick="show('rbac')">🛡️ RBAC</button>
+            <button class="tab" onclick="show('incident')">🚨 Incident Flow</button>
+            <button class="tab" onclick="show('change')">🔄 Change Mgmt</button>
+            <button class="tab" onclick="show('sla')">⏱️ SLA Engine</button>
+            <button class="tab" onclick="show('websocket')">⚡ WebSocket</button>
+            <button class="tab" onclick="show('webhooks')">🔌 Webhooks</button>
+            <button class="tab" onclick="show('integrations')">🔧 Integrations</button>
+            <button class="tab" onclick="show('models')">🗄️ Data Models</button>
+        </nav>
+
+        <!-- API Routes -->
+        <section id="api" class="panel active">
+            <h2 class="section-title">Complete API Route Map</h2>
+            
+            <div class="grid-3">
+                <div class="card">
+                    <div class="card-title">🔐 /api/v1/auth</div>
+                    <div class="func-list">
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/login</span><span class="func-desc">JWT auth</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/register</span><span class="func-desc">New user</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/refresh-token</span><span class="func-desc">Renew JWT</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/me</span><span class="func-desc">Current user</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/logout</span><span class="func-desc">End session</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/enable-mfa</span><span class="func-desc">TOTP setup</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/sso/azure</span><span class="func-desc">Azure AD</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/sso/google</span><span class="func-desc">Google SSO</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🚨 /api/v1/incidents</div>
+                    <div class="func-list">
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/</span><span class="func-desc">List all</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/stats</span><span class="func-desc">Statistics</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/:id</span><span class="func-desc">Get by ID</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/</span><span class="func-desc">Create new</span></div>
+                        <div class="func-item"><span class="func-method method-put">PUT</span><span class="func-name">/:id</span><span class="func-desc">Update</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/assign</span><span class="func-desc">Assign user</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/resolve</span><span class="func-desc">Resolve</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/notes</span><span class="func-desc">Add note</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/link-change</span><span class="func-desc">Link CHG</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔄 /api/v1/changes</div>
+                    <div class="func-list">
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/</span><span class="func-desc">List all</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/calendar</span><span class="func-desc">Calendar view</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/</span><span class="func-desc">Create RFC</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/submit</span><span class="func-desc">Submit CAB</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/approve</span><span class="func-desc">Approve</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/reject</span><span class="func-desc">Reject</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/implement</span><span class="func-desc">Start impl</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/complete</span><span class="func-desc">Close</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/rollback</span><span class="func-desc">Rollback</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📊 /api/v1/dashboard</div>
+                    <div class="func-list">
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/</span><span class="func-desc">Full data</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/kpis</span><span class="func-desc">KPI metrics</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/incident-trends</span><span class="func-desc">Trends</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/sla</span><span class="func-desc">SLA metrics</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/activity-feed</span><span class="func-desc">Activities</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/team-workload</span><span class="func-desc">Workload</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/alerts-summary</span><span class="func-desc">Alerts</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/quick-stats</span><span class="func-desc">Header stats</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔔 /api/v1/alerts</div>
+                    <div class="func-list">
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/</span><span class="func-desc">List alerts</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/stats</span><span class="func-desc">Statistics</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/:id</span><span class="func-desc">Get alert</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/acknowledge</span><span class="func-desc">Ack alert</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/resolve</span><span class="func-desc">Resolve</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/silence</span><span class="func-desc">Silence</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/create-incident</span><span class="func-desc">→ Incident</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔌 /api/v1/integrations</div>
+                    <div class="func-list">
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/prometheus/targets</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/prometheus/query</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/alertmanager/alerts</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/loki/query</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/stackstorm/packs</span></div>
+                        <div class="func-item"><span class="func-method method-get">GET</span><span class="func-name">/stackstorm/actions</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/stackstorm/executions</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:type/test</span><span class="func-desc">Test conn</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Auth System -->
+        <section id="auth" class="panel">
+            <h2 class="section-title">Authentication System</h2>
+            
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">🔐 JWT Token Flow</div>
+                    <div class="flow">
+                        <div class="flow-node"><div class="flow-icon">👤</div><div class="flow-name">Login</div><div class="flow-detail">email + password</div></div>
+                        <div class="flow-node"><div class="flow-icon">🔒</div><div class="flow-name">bcrypt</div><div class="flow-detail">compare hash</div></div>
+                        <div class="flow-node"><div class="flow-icon">🎫</div><div class="flow-name">JWT Sign</div><div class="flow-detail">accessToken</div></div>
+                        <div class="flow-node"><div class="flow-icon">💾</div><div class="flow-name">Session</div><div class="flow-detail">prisma.session</div></div>
+                        <div class="flow-node"><div class="flow-icon">✅</div><div class="flow-name">Response</div><div class="flow-detail">tokens + user</div></div>
+                    </div>
+                    <div class="code">
+                        <div class="code-header"><span class="code-file">auth.controller.js</span><span class="code-lang">JS</span></div>
+                        <div class="code-body">
+<span class="c-keyword">const</span> <span class="c-func">generateTokens</span> = (<span class="c-var">userId</span>) => {
+  <span class="c-keyword">const</span> <span class="c-var">accessToken</span> = jwt.<span class="c-func">sign</span>(
+    { <span class="c-var">userId</span> },
+    process.env.<span class="c-var">JWT_SECRET</span>,
+    { expiresIn: <span class="c-string">'24h'</span> }
+  );
+  <span class="c-keyword">const</span> <span class="c-var">refreshToken</span> = jwt.<span class="c-func">sign</span>(
+    { <span class="c-var">userId</span>, type: <span class="c-string">'refresh'</span> },
+    process.env.<span class="c-var">JWT_REFRESH_SECRET</span>,
+    { expiresIn: <span class="c-string">'7d'</span> }
+  );
+  <span class="c-keyword">return</span> { <span class="c-var">accessToken</span>, <span class="c-var">refreshToken</span> };
+};
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🛡️ Middleware Chain</div>
+                    <div class="flow">
+                        <div class="flow-node"><div class="flow-icon">📨</div><div class="flow-name">Request</div><div class="flow-detail">Authorization</div></div>
+                        <div class="flow-node"><div class="flow-icon">🔑</div><div class="flow-name">authenticate()</div><div class="flow-detail">jwt.verify()</div></div>
+                        <div class="flow-node"><div class="flow-icon">👤</div><div class="flow-name">Load User</div><div class="flow-detail">prisma.user</div></div>
+                        <div class="flow-node"><div class="flow-icon">✅</div><div class="flow-name">req.user</div><div class="flow-detail">Attached</div></div>
+                    </div>
+                    <div class="code">
+                        <div class="code-header"><span class="code-file">auth.middleware.js</span><span class="code-lang">JS</span></div>
+                        <div class="code-body">
+<span class="c-keyword">const</span> <span class="c-var">token</span> = authHeader.<span class="c-func">split</span>(<span class="c-string">' '</span>)[1];
+<span class="c-keyword">const</span> <span class="c-var">decoded</span> = jwt.<span class="c-func">verify</span>(<span class="c-var">token</span>, process.env.<span class="c-var">JWT_SECRET</span>);
+
+<span class="c-keyword">const</span> <span class="c-var">user</span> = <span class="c-keyword">await</span> prisma.user.<span class="c-func">findUnique</span>({
+  where: { id: <span class="c-var">decoded</span>.userId },
+  select: { id, email, firstName, lastName, role, status }
+});
+
+<span class="c-keyword">if</span> (<span class="c-var">user</span>.status !== <span class="c-string">'ACTIVE'</span>) {
+  <span class="c-keyword">return</span> res.<span class="c-func">status</span>(401).<span class="c-func">json</span>({ error: <span class="c-string">'Account not active'</span> });
+}
+req.<span class="c-var">user</span> = <span class="c-var">user</span>;
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔒 Security Features</div>
+                <div class="grid-4">
+                    <div style="background: var(--bg-code); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔐</div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">bcrypt</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">12 salt rounds</div>
+                    </div>
+                    <div style="background: var(--bg-code); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🚫</div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">Account Lock</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">5 attempts → 30min</div>
+                    </div>
+                    <div style="background: var(--bg-code); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📱</div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">MFA/TOTP</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">Authenticator app</div>
+                    </div>
+                    <div style="background: var(--bg-code); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔄</div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">Refresh Token</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">7 day expiry</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RBAC -->
+        <section id="rbac" class="panel">
+            <h2 class="section-title">Role-Based Access Control</h2>
+            
+            <div class="card">
+                <div class="card-title">👥 Permission Matrix</div>
+                <table class="perm-table">
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th>ADMIN</th>
+                            <th>MANAGER</th>
+                            <th>OPERATOR</th>
+                            <th>ON_CALL</th>
+                            <th>VIEWER</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>incidents (read/create/update/delete)</td>
+                            <td class="perm-yes">✓ All</td>
+                            <td class="perm-yes">✓ RCUD</td>
+                            <td class="perm-yes">✓ RCU</td>
+                            <td class="perm-yes">✓ RCU</td>
+                            <td class="perm-yes">✓ R</td>
+                        </tr>
+                        <tr>
+                            <td>changes (read/create/update/approve)</td>
+                            <td class="perm-yes">✓ All</td>
+                            <td class="perm-yes">✓ RCUA</td>
+                            <td class="perm-yes">✓ RC</td>
+                            <td class="perm-yes">✓ R</td>
+                            <td class="perm-yes">✓ R</td>
+                        </tr>
+                        <tr>
+                            <td>problems (read/create/update/delete)</td>
+                            <td class="perm-yes">✓ All</td>
+                            <td class="perm-yes">✓ RCUD</td>
+                            <td class="perm-yes">✓ RC</td>
+                            <td class="perm-yes">✓ R</td>
+                            <td class="perm-yes">✓ R</td>
+                        </tr>
+                        <tr>
+                            <td>assets (CMDB)</td>
+                            <td class="perm-yes">✓ All</td>
+                            <td class="perm-yes">✓ R</td>
+                            <td class="perm-yes">✓ R</td>
+                            <td class="perm-yes">✓ R</td>
+                            <td class="perm-yes">✓ R</td>
+                        </tr>
+                        <tr>
+                            <td>teams (read/update)</td>
+                            <td class="perm-yes">✓ All</td>
+                            <td class="perm-yes">✓ RU</td>
+                            <td class="perm-yes">✓ R</td>
+                            <td class="perm-yes">✓ R</td>
+                            <td class="perm-yes">✓ R</td>
+                        </tr>
+                        <tr>
+                            <td>network (read/update)</td>
+                            <td class="perm-yes">✓ All</td>
+                            <td class="perm-no">✗</td>
+                            <td class="perm-no">✗</td>
+                            <td class="perm-yes">✓ RU</td>
+                            <td class="perm-no">✗</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="code">
+                <div class="code-header"><span class="code-file">auth.middleware.js - checkPermission()</span><span class="code-lang">JS</span></div>
+                <div class="code-body">
+<span class="c-keyword">const</span> <span class="c-var">permissions</span> = {
+  <span class="c-type">ADMIN</span>: [<span class="c-string">'*'</span>],  <span class="c-comment">// Full access to everything</span>
+  <span class="c-type">MANAGER</span>: {
+    incidents: [<span class="c-string">'read'</span>, <span class="c-string">'create'</span>, <span class="c-string">'update'</span>, <span class="c-string">'delete'</span>],
+    changes:   [<span class="c-string">'read'</span>, <span class="c-string">'create'</span>, <span class="c-string">'update'</span>, <span class="c-string">'approve'</span>],
+    problems:  [<span class="c-string">'read'</span>, <span class="c-string">'create'</span>, <span class="c-string">'update'</span>, <span class="c-string">'delete'</span>],
+  },
+  <span class="c-type">OPERATOR</span>: {
+    incidents: [<span class="c-string">'read'</span>, <span class="c-string">'create'</span>, <span class="c-string">'update'</span>],
+    changes:   [<span class="c-string">'read'</span>, <span class="c-string">'create'</span>],
+  },
+  <span class="c-type">ON_CALL</span>: {
+    incidents: [<span class="c-string">'read'</span>, <span class="c-string">'create'</span>, <span class="c-string">'update'</span>],
+    network:   [<span class="c-string">'read'</span>, <span class="c-string">'update'</span>],
+  }
+};
+                </div>
+            </div>
+        </section>
+
+        <!-- Incident Flow -->
+        <section id="incident" class="panel">
+            <h2 class="section-title">Incident Lifecycle</h2>
+            
+            <div class="card">
+                <div class="card-title">📊 State Machine</div>
+                <div class="state-diagram">
+                    <div class="state-node state-new">NEW</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node state-progress">IN_PROGRESS</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node state-hold">ON_HOLD</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node state-progress">IN_PROGRESS</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node state-resolved">RESOLVED</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node state-closed">CLOSED</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">🎯 Priority Matrix</div>
+                    <div class="priority-grid">
+                        <div class="priority-cell priority-header"></div>
+                        <div class="priority-cell priority-header">CRITICAL</div>
+                        <div class="priority-cell priority-header">HIGH</div>
+                        <div class="priority-cell priority-header">MEDIUM</div>
+                        <div class="priority-cell priority-header">LOW</div>
+                        <div class="priority-cell priority-header">CRITICAL</div>
+                        <div class="priority-cell priority-p1">P1</div>
+                        <div class="priority-cell priority-p1">P1</div>
+                        <div class="priority-cell priority-p2">P2</div>
+                        <div class="priority-cell priority-p3">P3</div>
+                        <div class="priority-cell priority-header">HIGH</div>
+                        <div class="priority-cell priority-p1">P1</div>
+                        <div class="priority-cell priority-p2">P2</div>
+                        <div class="priority-cell priority-p2">P2</div>
+                        <div class="priority-cell priority-p3">P3</div>
+                        <div class="priority-cell priority-header">MEDIUM</div>
+                        <div class="priority-cell priority-p2">P2</div>
+                        <div class="priority-cell priority-p2">P2</div>
+                        <div class="priority-cell priority-p3">P3</div>
+                        <div class="priority-cell priority-p3">P3</div>
+                        <div class="priority-cell priority-header">LOW</div>
+                        <div class="priority-cell priority-p3">P3</div>
+                        <div class="priority-cell priority-p3">P3</div>
+                        <div class="priority-cell priority-p3">P3</div>
+                        <div class="priority-cell priority-p4">P4</div>
+                    </div>
+                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted); text-align: center;">
+                        Impact (row) × Urgency (column) = Priority
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔢 Number Generation</div>
+                    <div class="code">
+                        <div class="code-header"><span class="code-file">helpers.js</span><span class="code-lang">JS</span></div>
+                        <div class="code-body">
+<span class="c-keyword">function</span> <span class="c-func">generateIncidentNumber</span>(<span class="c-var">lastNumber</span>) {
+  <span class="c-keyword">const</span> <span class="c-var">num</span> = <span class="c-var">lastNumber</span> 
+    ? <span class="c-func">parseInt</span>(<span class="c-var">lastNumber</span>.<span class="c-func">replace</span>(<span class="c-string">'INC'</span>, <span class="c-string">''</span>)) + 1 
+    : 1;
+  <span class="c-keyword">return</span> <span class="c-string">`INC${String(num).padStart(7, '0')}`</span>;
+}
+<span class="c-comment">// Output: INC0000001, INC0000002, ...</span>
+
+<span class="c-comment">// Change: CHG0000001</span>
+<span class="c-comment">// Problem: PRB0000001</span>
+<span class="c-comment">// Alert: ALT-1703123456789-a1b2c3d4</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLA Engine -->
+        <section id="sla" class="panel">
+            <h2 class="section-title">SLA Engine</h2>
+            
+            <div class="card">
+                <div class="card-title">⏱️ SLA Targets by Priority</div>
+                <table class="sla-table">
+                    <thead>
+                        <tr>
+                            <th>Priority</th>
+                            <th>Response Time</th>
+                            <th>Resolution Time</th>
+                            <th>Business Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="sla-p1">
+                            <td><strong>P1 - Critical</strong></td>
+                            <td>15 minutes</td>
+                            <td>1 hour</td>
+                            <td>24/7</td>
+                        </tr>
+                        <tr class="sla-p2">
+                            <td><strong>P2 - High</strong></td>
+                            <td>30 minutes</td>
+                            <td>4 hours</td>
+                            <td>24/7</td>
+                        </tr>
+                        <tr class="sla-p3">
+                            <td><strong>P3 - Medium</strong></td>
+                            <td>2 hours</td>
+                            <td>8 hours</td>
+                            <td>Business Hours</td>
+                        </tr>
+                        <tr class="sla-p4">
+                            <td><strong>P4 - Low</strong></td>
+                            <td>8 hours</td>
+                            <td>24 hours</td>
+                            <td>Business Hours</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="code">
+                <div class="code-header"><span class="code-file">helpers.js - calculateSLATargetTime()</span><span class="code-lang">JS</span></div>
+                <div class="code-body">
+<span class="c-keyword">function</span> <span class="c-func">calculateSLATargetTime</span>(<span class="c-var">startTime</span>, <span class="c-var">minutes</span>, <span class="c-var">businessHoursOnly</span> = <span class="c-keyword">true</span>) {
+  <span class="c-comment">// Business hours: 9 AM - 6 PM, Mon-Fri</span>
+  <span class="c-keyword">let</span> <span class="c-var">remainingMinutes</span> = <span class="c-var">minutes</span>;
+  <span class="c-keyword">let</span> <span class="c-var">current</span> = <span class="c-keyword">new</span> <span class="c-type">Date</span>(<span class="c-var">startTime</span>);
+
+  <span class="c-keyword">while</span> (<span class="c-var">remainingMinutes</span> > 0) {
+    <span class="c-keyword">const</span> <span class="c-var">dayOfWeek</span> = <span class="c-var">current</span>.<span class="c-func">getDay</span>();
+    <span class="c-keyword">const</span> <span class="c-var">hour</span> = <span class="c-var">current</span>.<span class="c-func">getHours</span>();
+
+    <span class="c-comment">// Skip weekends (0 = Sunday, 6 = Saturday)</span>
+    <span class="c-keyword">if</span> (<span class="c-var">dayOfWeek</span> === 0 || <span class="c-var">dayOfWeek</span> === 6) {
+      <span class="c-var">current</span>.<span class="c-func">setDate</span>(<span class="c-var">current</span>.<span class="c-func">getDate</span>() + 1);
+      <span class="c-var">current</span>.<span class="c-func">setHours</span>(9, 0, 0, 0);
+      <span class="c-keyword">continue</span>;
+    }
+    <span class="c-comment">// Before 9 AM → Jump to 9 AM</span>
+    <span class="c-comment">// After 6 PM → Jump to next day 9 AM</span>
+    <span class="c-comment">// Within hours → Add minutes</span>
+  }
+  <span class="c-keyword">return</span> <span class="c-var">current</span>;
+}
+                </div>
+            </div>
+        </section>
+
+        <!-- WebSocket -->
+        <section id="websocket" class="panel">
+            <h2 class="section-title">WebSocket Real-time Events</h2>
+            
+            <div class="ws-grid">
+                <div class="ws-category">
+                    <div class="ws-title">📁 Room Subscriptions</div>
+                    <div class="ws-event"><span class="ws-name">subscribe:incidents</span><span class="ws-dir dir-on">→ join</span></div>
+                    <div class="ws-event"><span class="ws-name">subscribe:alerts</span><span class="ws-dir dir-on">→ join</span></div>
+                    <div class="ws-event"><span class="ws-name">subscribe:changes</span><span class="ws-dir dir-on">→ join</span></div>
+                    <div class="ws-event"><span class="ws-name">subscribe:dashboard</span><span class="ws-dir dir-on">→ join</span></div>
+                    <div class="ws-event"><span class="ws-name">subscribe:incident</span><span class="ws-dir dir-on">→ join(id)</span></div>
+                </div>
+                <div class="ws-category">
+                    <div class="ws-title">🚨 Incident Events</div>
+                    <div class="ws-event"><span class="ws-name">incident:created</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">incident:updated</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">incident:assigned</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">incident:resolved</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">incident:note-added</span><span class="ws-dir dir-emit">← emit</span></div>
+                </div>
+                <div class="ws-category">
+                    <div class="ws-title">🔔 Alert Events</div>
+                    <div class="ws-event"><span class="ws-name">alert:received</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">alert:acknowledged</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">alert:resolved</span><span class="ws-dir dir-emit">← emit</span></div>
+                </div>
+                <div class="ws-category">
+                    <div class="ws-title">📊 Dashboard Events</div>
+                    <div class="ws-event"><span class="ws-name">stats:updated</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">kpi:refresh</span><span class="ws-dir dir-emit">← emit</span></div>
+                </div>
+                <div class="ws-category">
+                    <div class="ws-title">👤 User Events</div>
+                    <div class="ws-event"><span class="ws-name">notification:new</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">user:typing</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">user:stopped-typing</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">connected</span><span class="ws-dir dir-emit">← emit</span></div>
+                </div>
+                <div class="ws-category">
+                    <div class="ws-title">🔄 Change Events</div>
+                    <div class="ws-event"><span class="ws-name">change:updated</span><span class="ws-dir dir-emit">← emit</span></div>
+                    <div class="ws-event"><span class="ws-name">change:approved</span><span class="ws-dir dir-emit">← emit</span></div>
+                </div>
+            </div>
+
+            <div class="code" style="margin-top: 1rem;">
+                <div class="code-header"><span class="code-file">websocket.service.js - Broadcast Helpers</span><span class="code-lang">JS</span></div>
+                <div class="code-body">
+<span class="c-var">io</span>.<span class="c-func">broadcastIncidentUpdate</span> = (<span class="c-var">incident</span>) => {
+  <span class="c-var">io</span>.to(<span class="c-string">'incidents'</span>).emit(<span class="c-string">'incident:updated'</span>, <span class="c-var">incident</span>);
+  <span class="c-var">io</span>.to(<span class="c-string">`incident:${incident.id}`</span>).emit(<span class="c-string">'incident:updated'</span>, <span class="c-var">incident</span>);
+  <span class="c-var">io</span>.to(<span class="c-string">'dashboard'</span>).emit(<span class="c-string">'stats:updated'</span>, { type: <span class="c-string">'incident'</span> });
+};
+
+<span class="c-var">io</span>.<span class="c-func">broadcastAlertReceived</span> = (<span class="c-var">alert</span>) => {
+  <span class="c-var">io</span>.to(<span class="c-string">'alerts'</span>).emit(<span class="c-string">'alert:received'</span>, <span class="c-var">alert</span>);
+  <span class="c-var">io</span>.to(<span class="c-string">'dashboard'</span>).emit(<span class="c-string">'stats:updated'</span>, { type: <span class="c-string">'alert'</span> });
+};
+
+<span class="c-var">io</span>.<span class="c-func">notifyUser</span> = (<span class="c-var">userId</span>, <span class="c-var">notification</span>) => {
+  <span class="c-var">io</span>.to(<span class="c-string">`user:${userId}`</span>).emit(<span class="c-string">'notification:new'</span>, <span class="c-var">notification</span>);
+};
+                </div>
+            </div>
+        </section>
+
+        <!-- Webhooks -->
+        <section id="webhooks" class="panel">
+            <h2 class="section-title">Webhook Endpoints</h2>
+            
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">🔔 POST /webhooks/alertmanager</div>
+                    <div class="flow">
+                        <div class="flow-node"><div class="flow-icon">📡</div><div class="flow-name">Receive</div><div class="flow-detail">alerts[]</div></div>
+                        <div class="flow-node"><div class="flow-icon">🔍</div><div class="flow-name">Find CI</div><div class="flow-detail">by hostname</div></div>
+                        <div class="flow-node"><div class="flow-icon">💾</div><div class="flow-name">Upsert</div><div class="flow-detail">prisma.alert</div></div>
+                        <div class="flow-node"><div class="flow-icon">🚨</div><div class="flow-name">Auto INC</div><div class="flow-detail">if CRITICAL</div></div>
+                    </div>
+                    <div class="code">
+                        <div class="code-header"><span class="code-file">webhook.routes.js</span><span class="code-lang">JS</span></div>
+                        <div class="code-body">
+<span class="c-comment">// Auto-create incident for CRITICAL alerts</span>
+<span class="c-keyword">if</span> (<span class="c-var">severity</span> === <span class="c-string">'CRITICAL'</span> && <span class="c-var">alert</span>.status !== <span class="c-string">'resolved'</span>) {
+  <span class="c-keyword">const</span> <span class="c-var">incident</span> = <span class="c-keyword">await</span> prisma.incident.<span class="c-func">create</span>({
+    data: {
+      number: <span class="c-func">generateIncidentNumber</span>(),
+      shortDescription: <span class="c-string">`${dbAlert.name} - ${labels.instance}`</span>,
+      source: <span class="c-string">'PROMETHEUS'</span>,
+      sourceAlertId: <span class="c-var">dbAlert</span>.alertId,
+      priority: <span class="c-func">calculatePriority</span>(<span class="c-string">'CRITICAL'</span>, <span class="c-string">'CRITICAL'</span>),
+      configItemId: <span class="c-var">configItem</span>?.id,
+    }
+  });
+}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📊 POST /webhooks/grafana</div>
+                    <div class="code">
+                        <div class="code-header"><span class="code-file">webhook.routes.js</span><span class="code-lang">JS</span></div>
+                        <div class="code-body">
+router.<span class="c-func">post</span>(<span class="c-string">'/grafana'</span>, <span class="c-keyword">async</span> (<span class="c-var">req</span>, <span class="c-var">res</span>) => {
+  <span class="c-keyword">const</span> { state, ruleName, ruleUrl, message } = <span class="c-var">req</span>.body;
+  
+  <span class="c-keyword">const</span> <span class="c-var">alert</span> = <span class="c-keyword">await</span> prisma.alert.<span class="c-func">create</span>({
+    data: {
+      alertId: <span class="c-func">generateAlertId</span>(),
+      name: <span class="c-var">ruleName</span> || <span class="c-string">'Grafana Alert'</span>,
+      severity: state === <span class="c-string">'alerting'</span> ? <span class="c-string">'WARNING'</span> : <span class="c-string">'INFO'</span>,
+      status: state === <span class="c-string">'ok'</span> ? <span class="c-string">'RESOLVED'</span> : <span class="c-string">'FIRING'</span>,
+      source: <span class="c-string">'grafana'</span>,
+      description: <span class="c-var">message</span>,
+    }
+  });
+});
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔌 All Webhook Endpoints</div>
+                <div class="func-list">
+                    <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/webhooks/alertmanager</span><span class="func-desc">Prometheus Alertmanager</span></div>
+                    <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/webhooks/grafana</span><span class="func-desc">Grafana alerts</span></div>
+                    <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/webhooks/pagerduty</span><span class="func-desc">PagerDuty incidents</span></div>
+                    <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/webhooks/generic</span><span class="func-desc">Generic webhook</span></div>
+                    <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/webhooks/stackstorm</span><span class="func-desc">StackStorm triggers</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Integrations -->
+        <section id="integrations" class="panel">
+            <h2 class="section-title">DevOps Integration Hub</h2>
+            
+            <div class="hub-grid">
+                <div>
+                    <h3 style="color: var(--accent-green); margin-bottom: 0.75rem;">📥 Inbound</h3>
+                    <div class="int-item"><div class="int-icon" style="background: rgba(230, 126, 34, 0.2);">🔔</div><div><div class="int-name">Prometheus</div><div class="int-desc">/prometheus/targets, /query</div></div><div class="int-status"></div></div>
+                    <div class="int-item"><div class="int-icon" style="background: rgba(241, 196, 15, 0.2);">📊</div><div><div class="int-name">Alertmanager</div><div class="int-desc">/alertmanager/alerts, /status</div></div><div class="int-status"></div></div>
+                    <div class="int-item"><div class="int-icon" style="background: rgba(46, 204, 113, 0.2);">📝</div><div><div class="int-name">Loki</div><div class="int-desc">/loki/query, /labels, /series</div></div><div class="int-status"></div></div>
+                    <div class="int-item"><div class="int-icon" style="background: rgba(155, 89, 182, 0.2);">📟</div><div><div class="int-name">PagerDuty</div><div class="int-desc">/webhooks/pagerduty</div></div><div class="int-status"></div></div>
+                </div>
+                
+                <div class="hub-center">
+                    <div class="hub-logo">LE</div>
+                    <div class="hub-name">LinkedEye-FinSpot</div>
+                    <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Enterprise ITSM Hub</div>
+                    <div style="background: var(--bg-code); border-radius: 8px; padding: 0.75rem; text-align: left;">
+                        <div style="font-family: 'Fira Code', monospace; font-size: 0.7rem; margin-bottom: 0.5rem; color: var(--accent-cyan);">API Base: /api/v1/integrations</div>
+                        <div class="func-item" style="margin-bottom: 0.25rem;"><span class="func-method method-get">GET</span><span class="func-name">/</span></div>
+                        <div class="func-item" style="margin-bottom: 0.25rem;"><span class="func-method method-post">POST</span><span class="func-name">/:type/test</span></div>
+                        <div class="func-item" style="margin-bottom: 0.25rem;"><span class="func-method method-post">POST</span><span class="func-name">/:id/enable</span></div>
+                        <div class="func-item"><span class="func-method method-post">POST</span><span class="func-name">/:id/sync</span></div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 style="color: var(--accent-pink); margin-bottom: 0.75rem;">📤 Outbound</h3>
+                    <div class="int-item"><div class="int-icon" style="background: rgba(231, 76, 60, 0.2);">⚡</div><div><div class="int-name">StackStorm</div><div class="int-desc">/stackstorm/executions</div></div><div class="int-status"></div></div>
+                    <div class="int-item"><div class="int-icon" style="background: rgba(142, 68, 173, 0.2);">💬</div><div><div class="int-name">Slack</div><div class="int-desc">Webhook notifications</div></div><div class="int-status"></div></div>
+                    <div class="int-item"><div class="int-icon" style="background: rgba(41, 128, 185, 0.2);">📧</div><div><div class="int-name">Email (SMTP)</div><div class="int-desc">Escalation alerts</div></div><div class="int-status"></div></div>
+                    <div class="int-item"><div class="int-icon" style="background: rgba(26, 188, 156, 0.2);">🐙</div><div><div class="int-name">GitHub</div><div class="int-desc">Change tracking</div></div><div class="int-status"></div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Models -->
+        <section id="models" class="panel">
+            <h2 class="section-title">Prisma Data Models</h2>
+            
+            <div class="grid-4">
+                <div class="model-card">
+                    <div class="model-header"><span>👤</span><span class="model-name">User</span></div>
+                    <div class="model-fields">
+                        <div class="field-row"><span class="field-pk">id</span><span class="field-type">UUID</span></div>
+                        <div class="field-row"><span>email</span><span class="field-type">UNIQUE</span></div>
+                        <div class="field-row"><span>password</span><span class="field-type">bcrypt</span></div>
+                        <div class="field-row"><span>role</span><span class="field-type">ADMIN|MANAGER|...</span></div>
+                        <div class="field-row"><span>status</span><span class="field-type">ACTIVE|PENDING</span></div>
+                        <div class="field-row"><span>mfaEnabled</span><span class="field-type">Boolean</span></div>
+                    </div>
+                    <div class="model-rels"><div class="rel-item"><span class="rel-arrow">→</span> sessions[], notifications[], teams[]</div></div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-header"><span>🚨</span><span class="model-name">Incident</span></div>
+                    <div class="model-fields">
+                        <div class="field-row"><span class="field-pk">id</span><span class="field-type">UUID</span></div>
+                        <div class="field-row"><span>number</span><span class="field-type">INC0000XXX</span></div>
+                        <div class="field-row"><span>state</span><span class="field-type">NEW|IN_PROGRESS|...</span></div>
+                        <div class="field-row"><span>priority</span><span class="field-type">P1|P2|P3|P4</span></div>
+                        <div class="field-row"><span class="field-fk">assignedToId</span><span class="field-type">FK→User</span></div>
+                        <div class="field-row"><span>slaBreached</span><span class="field-type">Boolean</span></div>
+                    </div>
+                    <div class="model-rels"><div class="rel-item"><span class="rel-arrow">→</span> workNotes[], alerts[], activities[]</div></div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-header"><span>🔔</span><span class="model-name">Alert</span></div>
+                    <div class="model-fields">
+                        <div class="field-row"><span class="field-pk">id</span><span class="field-type">UUID</span></div>
+                        <div class="field-row"><span>alertId</span><span class="field-type">UNIQUE</span></div>
+                        <div class="field-row"><span>severity</span><span class="field-type">CRITICAL|WARNING</span></div>
+                        <div class="field-row"><span>status</span><span class="field-type">FIRING|RESOLVED</span></div>
+                        <div class="field-row"><span>source</span><span class="field-type">prometheus|grafana</span></div>
+                        <div class="field-row"><span class="field-fk">incidentId</span><span class="field-type">FK→Incident</span></div>
+                    </div>
+                    <div class="model-rels"><div class="rel-item"><span class="rel-arrow">→</span> configItem, incident</div></div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-header"><span>🔄</span><span class="model-name">Change</span></div>
+                    <div class="model-fields">
+                        <div class="field-row"><span class="field-pk">id</span><span class="field-type">UUID</span></div>
+                        <div class="field-row"><span>number</span><span class="field-type">CHG0000XXX</span></div>
+                        <div class="field-row"><span>type</span><span class="field-type">NORMAL|EMERGENCY</span></div>
+                        <div class="field-row"><span>state</span><span class="field-type">DRAFT|AUTHORIZE|...</span></div>
+                        <div class="field-row"><span>riskLevel</span><span class="field-type">LOW|MEDIUM|HIGH</span></div>
+                        <div class="field-row"><span>gitRepoUrl</span><span class="field-type">String?</span></div>
+                    </div>
+                    <div class="model-rels"><div class="rel-item"><span class="rel-arrow">→</span> approvals[], affectedCIs[]</div></div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-header"><span>📦</span><span class="model-name">ConfigurationItem</span></div>
+                    <div class="model-fields">
+                        <div class="field-row"><span class="field-pk">id</span><span class="field-type">UUID</span></div>
+                        <div class="field-row"><span>name</span><span class="field-type">String</span></div>
+                        <div class="field-row"><span>type</span><span class="field-type">SERVER|NETWORK|APP</span></div>
+                        <div class="field-row"><span>hostname</span><span class="field-type">String?</span></div>
+                        <div class="field-row"><span>prometheusJob</span><span class="field-type">String?</span></div>
+                        <div class="field-row"><span>grafanaDashboard</span><span class="field-type">String?</span></div>
+                    </div>
+                    <div class="model-rels"><div class="rel-item"><span class="rel-arrow">→</span> incidents[], alerts[]</div></div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-header"><span>✅</span><span class="model-name">Approval</span></div>
+                    <div class="model-fields">
+                        <div class="field-row"><span class="field-pk">id</span><span class="field-type">UUID</span></div>
+                        <div class="field-row"><span class="field-fk">changeId</span><span class="field-type">FK→Change</span></div>
+                        <div class="field-row"><span class="field-fk">approverId</span><span class="field-type">FK→User</span></div>
+                        <div class="field-row"><span>state</span><span class="field-type">PENDING|APPROVED</span></div>
+                        <div class="field-row"><span>comments</span><span class="field-type">String?</span></div>
+                    </div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-header"><span>🔔</span><span class="model-name">Notification</span></div>
+                    <div class="model-fields">
+                        <div class="field-row"><span class="field-pk">id</span><span class="field-type">UUID</span></div>
+                        <div class="field-row"><span class="field-fk">userId</span><span class="field-type">FK→User</span></div>
+                        <div class="field-row"><span>type</span><span class="field-type">INCIDENT_ASSIGNED</span></div>
+                        <div class="field-row"><span>title</span><span class="field-type">String</span></div>
+                        <div class="field-row"><span>isRead</span><span class="field-type">Boolean</span></div>
+                    </div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-header"><span>🔌</span><span class="model-name">Integration</span></div>
+                    <div class="model-fields">
+                        <div class="field-row"><span class="field-pk">id</span><span class="field-type">UUID</span></div>
+                        <div class="field-row"><span>name</span><span class="field-type">String</span></div>
+                        <div class="field-row"><span>type</span><span class="field-type">PROMETHEUS|GRAFANA</span></div>
+                        <div class="field-row"><span>status</span><span class="field-type">ACTIVE|INACTIVE</span></div>
+                        <div class="field-row"><span>config</span><span class="field-type">JSON</span></div>
+                    </div>
+                    <div class="model-rels"><div class="rel-item"><span class="rel-arrow">→</span> webhooks[]</div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Change Management -->
+        <section id="change" class="panel">
+            <h2 class="section-title">Change Management Workflow</h2>
+            
+            <div class="card">
+                <div class="card-title">📊 Change State Machine</div>
+                <div class="state-diagram">
+                    <div class="state-node state-new">DRAFT</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">ASSESS</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node state-hold">AUTHORIZE</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node state-progress">SCHEDULED</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" style="border-color: var(--accent-pink); color: var(--accent-pink);">IMPLEMENT</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" style="border-color: var(--accent-blue); color: var(--accent-blue);">REVIEW</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node state-closed">CLOSED</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">✅ Approval Flow</div>
+                    <div class="flow">
+                        <div class="flow-node"><div class="flow-icon">📝</div><div class="flow-name">Submit</div><div class="flow-detail">submitForApproval()</div></div>
+                        <div class="flow-node"><div class="flow-icon">👥</div><div class="flow-name">CAB</div><div class="flow-detail">Approval.create()</div></div>
+                        <div class="flow-node"><div class="flow-icon">✅</div><div class="flow-name">Approve</div><div class="flow-detail">all APPROVED?</div></div>
+                        <div class="flow-node"><div class="flow-icon">📅</div><div class="flow-name">Schedule</div><div class="flow-detail">SCHEDULED</div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔧 Change Types</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+                        <div style="background: var(--bg-code); padding: 0.75rem; border-radius: 6px; text-align: center; border-left: 3px solid var(--accent-green);">
+                            <div style="font-weight: 600;">NORMAL</div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted);">Full CAB approval</div>
+                        </div>
+                        <div style="background: var(--bg-code); padding: 0.75rem; border-radius: 6px; text-align: center; border-left: 3px solid var(--accent-orange);">
+                            <div style="font-weight: 600;">STANDARD</div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted);">Pre-approved</div>
+                        </div>
+                        <div style="background: var(--bg-code); padding: 0.75rem; border-radius: 6px; text-align: center; border-left: 3px solid var(--accent-red);">
+                            <div style="font-weight: 600;">EMERGENCY</div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted);">Fast-track</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            🔗 LinkedEye-FinSpot | Code-Level Architecture v2.0 | Generated for Finspot Technology
+        </footer>
+    </div>
+
+    <script>
+        function show(id) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

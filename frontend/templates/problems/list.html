@@ -1,0 +1,420 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Problem Management - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Problem Management</h1>
+        <p class="page-subtitle">Identify root causes and prevent recurring incidents</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="exportProblems()">
+            <i class="fas fa-download"></i> Export
+        </button>
+        <a href="{{ url_for('problem_create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Problem
+        </a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid stats-grid-4">
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-blue">
+            <i class="fas fa-search"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-investigation">0</span>
+            <span class="stat-label">Under Investigation</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-orange">
+            <i class="fas fa-microscope"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-rca">0</span>
+            <span class="stat-label">Root Cause Analysis</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-green">
+            <i class="fas fa-band-aid"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-workaround">0</span>
+            <span class="stat-label">Workaround Available</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-purple">
+            <i class="fas fa-check-double"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-resolved">0</span>
+            <span class="stat-label">Resolved This Month</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-filter"></i> Filters</h3>
+        <button class="btn btn-text" onclick="clearFilters()">Clear All</button>
+    </div>
+    <div class="card-body">
+        <div class="filters-grid">
+            <div class="form-group">
+                <label class="form-label">Search</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="form-input" id="filter-search" placeholder="Search problems...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">State</label>
+                <select class="form-select" id="filter-state">
+                    <option value="">All States</option>
+                    <option value="NEW">New</option>
+                    <option value="ASSESS">Assessment</option>
+                    <option value="ROOT_CAUSE_ANALYSIS">Root Cause Analysis</option>
+                    <option value="KNOWN_ERROR">Known Error</option>
+                    <option value="PENDING_CHANGE">Pending Change</option>
+                    <option value="RESOLVED">Resolved</option>
+                    <option value="CLOSED">Closed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select class="form-select" id="filter-priority">
+                    <option value="">All Priorities</option>
+                    <option value="P1">P1 - Critical</option>
+                    <option value="P2">P2 - High</option>
+                    <option value="P3">P3 - Medium</option>
+                    <option value="P4">P4 - Low</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select class="form-select" id="filter-category">
+                    <option value="">All Categories</option>
+                    <option value="Infrastructure">Infrastructure</option>
+                    <option value="Network">Network</option>
+                    <option value="Database">Database</option>
+                    <option value="Application">Application</option>
+                    <option value="Security">Security</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Problems Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-bug"></i> Problems</h3>
+        <span class="results-count"><span id="total-count">0</span> problems</span>
+    </div>
+    <div class="card-body no-padding">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Number</th>
+                        <th>Short Description</th>
+                        <th>State</th>
+                        <th>Priority</th>
+                        <th>Category</th>
+                        <th>Related Incidents</th>
+                        <th>Workaround</th>
+                        <th>Assigned To</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="problems-tbody">
+                    <tr class="loading-row">
+                        <td colspan="9">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span>Loading problems...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="pagination">
+            <button class="pagination-btn" id="prev-page" disabled>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <div class="pagination-info">
+                Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+            </div>
+            <button class="pagination-btn" id="next-page">
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Known Errors Database -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-database"></i> Known Error Database (KEDB)</h3>
+        <a href="/problems/kedb" class="btn btn-text">View All</a>
+    </div>
+    <div class="card-body">
+        <div class="kedb-list" id="kedb-list">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading known errors...</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let filters = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadProblems();
+    loadStats();
+    loadKnownErrors();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    let searchTimeout;
+    document.getElementById('filter-search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filters.search = this.value;
+            currentPage = 1;
+            loadProblems();
+        }, 300);
+    });
+
+    ['filter-state', 'filter-priority', 'filter-category'].forEach(id => {
+        document.getElementById(id).addEventListener('change', function() {
+            filters[id.replace('filter-', '')] = this.value;
+            currentPage = 1;
+            loadProblems();
+        });
+    });
+
+    document.getElementById('prev-page').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            loadProblems();
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+        currentPage++;
+        loadProblems();
+    });
+}
+
+async function loadProblems() {
+    try {
+        const params = new URLSearchParams({ page: currentPage, limit: 20, ...filters });
+        const response = await fetch(`/api/proxy/problems?${params}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            renderProblems(data.data);
+            updatePagination(data.pagination);
+        }
+    } catch (error) {
+        console.error('Error loading problems:', error);
+    }
+}
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/proxy/problems/stats', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('stat-investigation').textContent = data.data.investigation || 0;
+            document.getElementById('stat-rca').textContent = data.data.rca || 0;
+            document.getElementById('stat-workaround').textContent = data.data.workaround || 0;
+            document.getElementById('stat-resolved').textContent = data.data.resolvedThisMonth || 0;
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+async function loadKnownErrors() {
+    try {
+        const response = await fetch('/api/proxy/problems?state=KNOWN_ERROR&limit=5', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            renderKnownErrors(data.data);
+        }
+    } catch (error) {
+        console.error('Error loading known errors:', error);
+    }
+}
+
+function renderProblems(problems) {
+    const tbody = document.getElementById('problems-tbody');
+
+    if (!problems || problems.length === 0) {
+        tbody.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="9">
+                    <div class="empty-state">
+                        <i class="fas fa-bug"></i>
+                        <h4>No problems found</h4>
+                        <p>Try adjusting your filters or create a new problem</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = problems.map(problem => `
+        <tr onclick="viewProblem('${problem.id}')">
+            <td>
+                <a href="/problems/${problem.id}" class="problem-number">${problem.number}</a>
+            </td>
+            <td class="description-cell">
+                <span class="short-description">${escapeHtml(problem.shortDescription)}</span>
+                ${problem.rootCause ? `<span class="root-cause-indicator" title="Root cause identified"><i class="fas fa-check-circle"></i></span>` : ''}
+            </td>
+            <td>
+                <span class="badge badge-state badge-${problem.state.toLowerCase().replace('_', '-')}">${formatState(problem.state)}</span>
+            </td>
+            <td>
+                <span class="badge badge-priority badge-${problem.priority.toLowerCase()}">${problem.priority}</span>
+            </td>
+            <td>${problem.category || '-'}</td>
+            <td>
+                <span class="incident-count" title="Related incidents">
+                    <i class="fas fa-exclamation-triangle"></i> ${problem._count?.incidents || 0}
+                </span>
+            </td>
+            <td>
+                ${problem.workaroundEffective ?
+                    '<span class="badge badge-success"><i class="fas fa-check"></i> Available</span>' :
+                    '<span class="badge badge-secondary">None</span>'}
+            </td>
+            <td>
+                ${problem.assignedTo ?
+                    `<span class="avatar avatar-sm">${getInitials(problem.assignedTo.firstName, problem.assignedTo.lastName)}</span>` :
+                    '<span class="text-muted">-</span>'}
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon" onclick="event.stopPropagation(); viewProblem('${problem.id}')" title="View">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-icon" onclick="event.stopPropagation(); createChangeFromProblem('${problem.id}')" title="Create Change">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+
+    document.getElementById('total-count').textContent = problems.length;
+}
+
+function renderKnownErrors(errors) {
+    const container = document.getElementById('kedb-list');
+
+    if (!errors || errors.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">No known errors in database</p>';
+        return;
+    }
+
+    container.innerHTML = errors.map(error => `
+        <div class="kedb-item" onclick="viewProblem('${error.id}')">
+            <div class="kedb-header">
+                <span class="kedb-number">${error.number}</span>
+                <span class="badge badge-priority badge-${error.priority.toLowerCase()}">${error.priority}</span>
+            </div>
+            <h4 class="kedb-title">${escapeHtml(error.shortDescription)}</h4>
+            <div class="kedb-details">
+                <span><i class="fas fa-tag"></i> ${error.category || 'N/A'}</span>
+                <span><i class="fas fa-exclamation-triangle"></i> ${error._count?.incidents || 0} incidents</span>
+                ${error.workaroundEffective ? '<span class="text-success"><i class="fas fa-check"></i> Workaround available</span>' : ''}
+            </div>
+            ${error.workaround ? `<p class="kedb-workaround"><strong>Workaround:</strong> ${escapeHtml(error.workaround.substring(0, 100))}...</p>` : ''}
+        </div>
+    `).join('');
+}
+
+function updatePagination(pagination) {
+    if (!pagination) return;
+    document.getElementById('current-page').textContent = pagination.page;
+    document.getElementById('total-pages').textContent = pagination.totalPages;
+    document.getElementById('prev-page').disabled = pagination.page <= 1;
+    document.getElementById('next-page').disabled = pagination.page >= pagination.totalPages;
+}
+
+function viewProblem(id) {
+    window.location.href = '/problems/' + id;
+}
+
+function createChangeFromProblem(problemId) {
+    window.location.href = `/changes/create?problemId=${problemId}`;
+}
+
+function clearFilters() {
+    filters = {};
+    document.querySelectorAll('.form-input, .form-select').forEach(el => el.value = '');
+    currentPage = 1;
+    loadProblems();
+}
+
+function exportProblems() {
+    const params = new URLSearchParams({ format: 'csv', ...filters });
+    window.location.href = `/api/proxy/problems/export?${params}`;
+}
+
+function formatState(state) {
+    const states = {
+        'NEW': 'New',
+        'ASSESS': 'Assessment',
+        'ROOT_CAUSE_ANALYSIS': 'RCA',
+        'KNOWN_ERROR': 'Known Error',
+        'PENDING_CHANGE': 'Pending Change',
+        'RESOLVED': 'Resolved',
+        'CLOSED': 'Closed'
+    };
+    return states[state] || state;
+}
+
+function getInitials(firstName, lastName) {
+    return (firstName?.charAt(0) || '') + (lastName?.charAt(0) || '');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function getToken() {
+    return localStorage.getItem('authToken') || '';
+}
+</script>
+{% endblock %}

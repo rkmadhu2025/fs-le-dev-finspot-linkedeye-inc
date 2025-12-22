@@ -1,0 +1,251 @@
+{% extends "components/layout.html" %}
+
+{% block title %}AI Insights | {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">AI Insights</h1>
+        <p class="page-subtitle">
+            Intelligent analytics and predictions powered by AI
+            <span class="refresh-indicator">
+                <i class="fas fa-robot"></i> AI-Powered
+            </span>
+        </p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary" id="refreshInsights">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- AI Summary Cards -->
+<div class="stats-grid">
+    <div class="stat-card primary">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-brain"></i>
+            </div>
+            <span class="stat-title">Predictions</span>
+        </div>
+        <div class="stat-value">12</div>
+        <div class="stat-footer">
+            <span class="text-muted">Active predictions</span>
+        </div>
+    </div>
+
+    <div class="stat-card success">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-check-double"></i>
+            </div>
+            <span class="stat-title">Accuracy</span>
+        </div>
+        <div class="stat-value">87%</div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i>
+            <span>5% improvement</span>
+        </div>
+    </div>
+
+    <div class="stat-card warning">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <span class="stat-title">Risk Alerts</span>
+        </div>
+        <div class="stat-value">3</div>
+        <div class="stat-footer">
+            <a href="#">View alerts <i class="fas fa-arrow-right"></i></a>
+        </div>
+    </div>
+
+    <div class="stat-card info">
+        <div class="stat-header">
+            <div class="stat-icon">
+                <i class="fas fa-lightbulb"></i>
+            </div>
+            <span class="stat-title">Recommendations</span>
+        </div>
+        <div class="stat-value">8</div>
+        <div class="stat-footer">
+            <span class="text-muted">Actionable insights</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-line"></i>
+                Incident Predictions
+            </h3>
+        </div>
+        <div class="card-body">
+            <canvas id="predictionChart" height="250"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-search"></i>
+                Root Cause Analysis
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="activity-feed">
+                <div class="activity-item">
+                    <div class="activity-icon warning">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text"><strong>Database Connection Pool</strong> - 23% of P1 incidents</div>
+                        <div class="activity-time">High Impact</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon danger">
+                        <i class="fas fa-memory"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text"><strong>Memory Leak Detected</strong> - Payment Service</div>
+                        <div class="activity-time">Critical</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon info">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text"><strong>Network Latency</strong> - Correlates with backup jobs</div>
+                        <div class="activity-time">Medium</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-lightbulb"></i>
+                AI Recommendations
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="activity-feed">
+                <div class="activity-item">
+                    <div class="activity-icon success">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text"><strong>Scale Database Replicas</strong> - Reduce response time by 35%</div>
+                        <div class="activity-time">High Priority</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon warning">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text"><strong>Optimize Caching</strong> - Reduce API latency by 40%</div>
+                        <div class="activity-time">Medium Priority</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon info">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text"><strong>Update Alert Thresholds</strong> - Reduce false positives by 15%</div>
+                        <div class="activity-time">Low Priority</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-shield-alt"></i>
+                Anomaly Detection
+            </h3>
+            <span class="badge badge-success">Normal</span>
+        </div>
+        <div class="card-body">
+            <div class="activity-feed">
+                <div class="activity-item">
+                    <div class="activity-icon success">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">CPU spike on web-server-03 - Auto-resolved</div>
+                        <div class="activity-time">14:32</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon info">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Unusual login pattern investigated</div>
+                        <div class="activity-time">12:15</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon success">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">API response time normalized</div>
+                        <div class="activity-time">09:45</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
+<script>
+const predictionCtx = document.getElementById('predictionChart').getContext('2d');
+new Chart(predictionCtx, {
+    type: 'line',
+    data: {
+        labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+        datasets: [{
+            label: 'Predicted Incidents',
+            data: [8, 12, 10, 15, 11, 9, 13],
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+document.getElementById('refreshInsights').addEventListener('click', function() {
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    setTimeout(() => {
+        this.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+    }, 1500);
+});
+</script>
+{% endblock %}

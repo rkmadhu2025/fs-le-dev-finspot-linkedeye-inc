@@ -1,0 +1,782 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Create Incident - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <nav class="breadcrumb">
+            <a href="{{ url_for('incidents_list') }}">Incidents</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Create New</span>
+        </nav>
+        <h1 class="page-title">Create Incident</h1>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+        <button class="btn btn-primary" onclick="submitIncident()">
+            <i class="fas fa-save"></i> Create Incident
+        </button>
+    </div>
+</div>
+
+<form id="incident-form" class="create-form">
+    <div class="form-grid">
+        <!-- Main Information -->
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-info-circle"></i> Incident Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">
+                            Short Description <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-input" id="shortDescription" name="shortDescription"
+                               placeholder="Brief summary of the incident" maxlength="160" required>
+                        <span class="char-count"><span id="desc-count">0</span>/160</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Description <span class="required">*</span>
+                        </label>
+                        <textarea class="form-textarea" id="description" name="description" rows="6"
+                                  placeholder="Detailed description of the incident, including:&#10;- What happened&#10;- When it started&#10;- Who/what is affected&#10;- Any error messages" required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Category <span class="required">*</span></label>
+                            <select class="form-select" id="category" name="category" required onchange="loadSubcategories()">
+                                <option value="">Select category...</option>
+                                <option value="Infrastructure">Infrastructure</option>
+                                <option value="Network">Network</option>
+                                <option value="Database">Database</option>
+                                <option value="Application">Application</option>
+                                <option value="Security">Security</option>
+                                <option value="Access">Access</option>
+                                <option value="Hardware">Hardware</option>
+                                <option value="Software">Software</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subcategory</label>
+                            <select class="form-select" id="subcategory" name="subcategory">
+                                <option value="">Select subcategory...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classification -->
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-tags"></i> Classification</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Impact <span class="required">*</span></label>
+                            <select class="form-select" id="impact" name="impact" required onchange="calculatePriority()">
+                                <option value="">Select impact...</option>
+                                <option value="HIGH">High - Enterprise/Critical Systems</option>
+                                <option value="MEDIUM">Medium - Department/Business Unit</option>
+                                <option value="LOW">Low - Individual User</option>
+                            </select>
+                            <span class="form-hint">How widespread is the issue?</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Urgency <span class="required">*</span></label>
+                            <select class="form-select" id="urgency" name="urgency" required onchange="calculatePriority()">
+                                <option value="">Select urgency...</option>
+                                <option value="HIGH">High - Immediate attention needed</option>
+                                <option value="MEDIUM">Medium - Within hours</option>
+                                <option value="LOW">Low - Can wait</option>
+                            </select>
+                            <span class="form-hint">How quickly does this need resolution?</span>
+                        </div>
+                    </div>
+
+                    <div class="priority-display">
+                        <label class="form-label">Calculated Priority</label>
+                        <div class="priority-box" id="priority-display">
+                            <span class="priority-value">--</span>
+                            <span class="priority-label">Select Impact & Urgency</span>
+                        </div>
+                        <input type="hidden" id="priority" name="priority" value="">
+                    </div>
+
+                    <!-- Priority Matrix Reference -->
+                    <div class="priority-matrix-help">
+                        <button type="button" class="btn btn-text btn-sm" onclick="togglePriorityMatrix()">
+                            <i class="fas fa-info-circle"></i> View Priority Matrix
+                        </button>
+                        <div class="priority-matrix" id="priority-matrix" style="display: none;">
+                            <table class="matrix-table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>High Urgency</th>
+                                        <th>Medium Urgency</th>
+                                        <th>Low Urgency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <th>High Impact</th>
+                                        <td class="p1">P1 - Critical</td>
+                                        <td class="p2">P2 - High</td>
+                                        <td class="p3">P3 - Medium</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Medium Impact</th>
+                                        <td class="p2">P2 - High</td>
+                                        <td class="p3">P3 - Medium</td>
+                                        <td class="p4">P4 - Low</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Low Impact</th>
+                                        <td class="p3">P3 - Medium</td>
+                                        <td class="p4">P4 - Low</td>
+                                        <td class="p4">P4 - Low</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment -->
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-users"></i> Assignment</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Assignment Group</label>
+                        <select class="form-select" id="assignmentGroupId" name="assignmentGroupId" onchange="loadGroupMembers()">
+                            <option value="">Select a group...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Assigned To</label>
+                        <select class="form-select" id="assignedToId" name="assignedToId">
+                            <option value="">Select a user (optional)...</option>
+                        </select>
+                        <span class="form-hint">Leave empty to let the group decide</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Item -->
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-server"></i> Configuration Item</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Search CI</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-search"></i>
+                            <input type="text" class="form-input" id="ci-search" placeholder="Search by name, IP, or hostname...">
+                        </div>
+                    </div>
+                    <div class="ci-results" id="ci-results" style="display: none;">
+                        <div class="ci-list" id="ci-list"></div>
+                    </div>
+                    <div class="selected-ci" id="selected-ci" style="display: none;">
+                        <div class="ci-card selected">
+                            <div class="ci-info">
+                                <span class="ci-icon"><i class="fas fa-server"></i></span>
+                                <div class="ci-details">
+                                    <h4 id="selected-ci-name"></h4>
+                                    <p id="selected-ci-info"></p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-text btn-sm" onclick="clearSelectedCI()">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="configItemId" name="configItemId" value="">
+                </div>
+            </div>
+        </div>
+
+        <!-- Caller Information -->
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-user"></i> Caller Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Caller Name</label>
+                            <input type="text" class="form-input" id="callerName" name="callerName"
+                                   placeholder="Name of the person reporting">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Caller Email</label>
+                            <input type="email" class="form-input" id="callerEmail" name="callerEmail"
+                                   placeholder="email@example.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Caller Phone</label>
+                        <input type="tel" class="form-input" id="callerPhone" name="callerPhone"
+                               placeholder="+1 (555) 123-4567">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Details -->
+        <div class="form-section full-width">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-paperclip"></i> Additional Details</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Related Problem</label>
+                            <select class="form-select" id="problemId" name="problemId">
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Related Change</label>
+                            <select class="form-select" id="changeId" name="changeId">
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Attachments</label>
+                        <div class="file-upload-area" id="file-upload-area">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag and drop files here or <button type="button" class="btn btn-text" onclick="document.getElementById('file-input').click()">browse</button></p>
+                            <span class="form-hint">Max file size: 10MB. Supported: Images, PDFs, Logs, Documents</span>
+                            <input type="file" id="file-input" multiple style="display: none" onchange="handleFileSelect(event)">
+                        </div>
+                        <div class="file-list" id="file-list"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Initial Work Notes</label>
+                        <textarea class="form-textarea" id="workNotes" name="workNotes" rows="3"
+                                  placeholder="Any initial notes about the incident (optional)"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="saveDraft()">
+            <i class="fas fa-save"></i> Save Draft
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Incident
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const subcategories = {
+    'Infrastructure': ['Server', 'Storage', 'Virtualization', 'Cloud', 'Backup'],
+    'Network': ['Connectivity', 'Firewall', 'DNS', 'VPN', 'Load Balancer'],
+    'Database': ['Connectivity', 'Performance', 'Backup', 'Replication', 'Query'],
+    'Application': ['Performance', 'Error', 'Availability', 'Functionality', 'Integration'],
+    'Security': ['Access Violation', 'Malware', 'Data Breach', 'Vulnerability', 'Audit'],
+    'Access': ['Password', 'Account', 'Permissions', 'MFA', 'SSO'],
+    'Hardware': ['Desktop', 'Laptop', 'Printer', 'Monitor', 'Peripheral'],
+    'Software': ['Installation', 'Update', 'License', 'Compatibility', 'Configuration']
+};
+
+const priorityMatrix = {
+    'HIGH-HIGH': 'P1',
+    'HIGH-MEDIUM': 'P2',
+    'HIGH-LOW': 'P3',
+    'MEDIUM-HIGH': 'P2',
+    'MEDIUM-MEDIUM': 'P3',
+    'MEDIUM-LOW': 'P4',
+    'LOW-HIGH': 'P3',
+    'LOW-MEDIUM': 'P4',
+    'LOW-LOW': 'P4'
+};
+
+const priorityLabels = {
+    'P1': 'Critical - Immediate Response',
+    'P2': 'High - Urgent Attention',
+    'P3': 'Medium - Normal Queue',
+    'P4': 'Low - Scheduled'
+};
+
+let selectedFiles = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadTeams();
+    loadProblems();
+    loadChanges();
+    setupFormListeners();
+    setupCISearch();
+    setupFileUpload();
+});
+
+function setupFormListeners() {
+    // Character counter for short description
+    document.getElementById('shortDescription').addEventListener('input', function() {
+        document.getElementById('desc-count').textContent = this.value.length;
+    });
+
+    // Form submission
+    document.getElementById('incident-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitIncident();
+    });
+}
+
+function loadSubcategories() {
+    const category = document.getElementById('category').value;
+    const subcategorySelect = document.getElementById('subcategory');
+
+    subcategorySelect.innerHTML = '<option value="">Select subcategory...</option>';
+
+    if (category && subcategories[category]) {
+        subcategories[category].forEach(sub => {
+            subcategorySelect.innerHTML += `<option value="${sub}">${sub}</option>`;
+        });
+    }
+}
+
+function calculatePriority() {
+    const impact = document.getElementById('impact').value;
+    const urgency = document.getElementById('urgency').value;
+
+    const priorityBox = document.getElementById('priority-display');
+    const priorityInput = document.getElementById('priority');
+
+    if (impact && urgency) {
+        const key = `${impact}-${urgency}`;
+        const priority = priorityMatrix[key];
+
+        priorityInput.value = priority;
+        priorityBox.innerHTML = `
+            <span class="priority-value priority-${priority.toLowerCase()}">${priority}</span>
+            <span class="priority-label">${priorityLabels[priority]}</span>
+        `;
+        priorityBox.className = `priority-box priority-${priority.toLowerCase()}`;
+    } else {
+        priorityInput.value = '';
+        priorityBox.innerHTML = `
+            <span class="priority-value">--</span>
+            <span class="priority-label">Select Impact & Urgency</span>
+        `;
+        priorityBox.className = 'priority-box';
+    }
+}
+
+function togglePriorityMatrix() {
+    const matrix = document.getElementById('priority-matrix');
+    matrix.style.display = matrix.style.display === 'none' ? 'block' : 'none';
+}
+
+async function loadTeams() {
+    try {
+        const response = await fetch('/api/proxy/teams', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const select = document.getElementById('assignmentGroupId');
+            data.data.forEach(team => {
+                select.innerHTML += `<option value="${team.id}">${team.name}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error loading teams:', error);
+    }
+}
+
+async function loadGroupMembers() {
+    const groupId = document.getElementById('assignmentGroupId').value;
+    const userSelect = document.getElementById('assignedToId');
+
+    userSelect.innerHTML = '<option value="">Select a user (optional)...</option>';
+
+    if (!groupId) return;
+
+    try {
+        const response = await fetch(`/api/proxy/teams/${groupId}/members`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            data.data.forEach(member => {
+                userSelect.innerHTML += `<option value="${member.user.id}">${member.user.firstName} ${member.user.lastName}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error loading group members:', error);
+    }
+}
+
+async function loadProblems() {
+    try {
+        const response = await fetch('/api/proxy/problems?state=OPEN', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            const select = document.getElementById('problemId');
+            data.data.forEach(problem => {
+                select.innerHTML += `<option value="${problem.id}">${problem.number} - ${problem.shortDescription}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error loading problems:', error);
+    }
+}
+
+async function loadChanges() {
+    try {
+        const response = await fetch('/api/proxy/changes?state=IMPLEMENT', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            const select = document.getElementById('changeId');
+            data.data.forEach(change => {
+                select.innerHTML += `<option value="${change.id}">${change.number} - ${change.shortDescription}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error loading changes:', error);
+    }
+}
+
+function setupCISearch() {
+    let searchTimeout;
+    const searchInput = document.getElementById('ci-search');
+    const resultsContainer = document.getElementById('ci-results');
+    const ciList = document.getElementById('ci-list');
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/proxy/assets?search=${encodeURIComponent(query)}&limit=10`, {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    ciList.innerHTML = data.data.map(ci => `
+                        <div class="ci-option" onclick="selectCI('${ci.id}', '${escapeHtml(ci.name)}', '${ci.type}', '${ci.ipAddress || ''}')">
+                            <span class="ci-icon"><i class="fas fa-${getCIIcon(ci.type)}"></i></span>
+                            <div class="ci-details">
+                                <h4>${ci.name}</h4>
+                                <p>${ci.type} | ${ci.ipAddress || 'No IP'} | ${ci.status}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                    resultsContainer.style.display = 'block';
+                } else {
+                    ciList.innerHTML = '<p class="text-muted text-center">No CIs found</p>';
+                    resultsContainer.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error searching CIs:', error);
+            }
+        }, 300);
+    });
+}
+
+function selectCI(id, name, type, ip) {
+    document.getElementById('configItemId').value = id;
+    document.getElementById('selected-ci-name').textContent = name;
+    document.getElementById('selected-ci-info').textContent = `${type} | ${ip || 'No IP'}`;
+    document.getElementById('selected-ci').style.display = 'block';
+    document.getElementById('ci-results').style.display = 'none';
+    document.getElementById('ci-search').value = '';
+}
+
+function clearSelectedCI() {
+    document.getElementById('configItemId').value = '';
+    document.getElementById('selected-ci').style.display = 'none';
+}
+
+function setupFileUpload() {
+    const uploadArea = document.getElementById('file-upload-area');
+
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+}
+
+function handleFileSelect(event) {
+    handleFiles(event.target.files);
+}
+
+function handleFiles(files) {
+    const fileList = document.getElementById('file-list');
+
+    Array.from(files).forEach(file => {
+        if (file.size > 10 * 1024 * 1024) {
+            showError(`File ${file.name} is too large (max 10MB)`);
+            return;
+        }
+
+        selectedFiles.push(file);
+
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+            <span class="file-icon"><i class="fas fa-${getFileIcon(file.name)}"></i></span>
+            <span class="file-name">${file.name}</span>
+            <span class="file-size">${formatFileSize(file.size)}</span>
+            <button type="button" class="btn-icon" onclick="removeFile(${selectedFiles.length - 1}, this)">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        fileList.appendChild(fileItem);
+    });
+}
+
+function removeFile(index, btn) {
+    selectedFiles.splice(index, 1);
+    btn.closest('.file-item').remove();
+}
+
+async function submitIncident() {
+    const form = document.getElementById('incident-form');
+
+    // Validate required fields
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const formData = {
+        shortDescription: document.getElementById('shortDescription').value,
+        description: document.getElementById('description').value,
+        category: document.getElementById('category').value,
+        subcategory: document.getElementById('subcategory').value,
+        impact: document.getElementById('impact').value,
+        urgency: document.getElementById('urgency').value,
+        priority: document.getElementById('priority').value,
+        assignmentGroupId: document.getElementById('assignmentGroupId').value || null,
+        assignedToId: document.getElementById('assignedToId').value || null,
+        configItemId: document.getElementById('configItemId').value || null,
+        callerName: document.getElementById('callerName').value,
+        callerEmail: document.getElementById('callerEmail').value,
+        callerPhone: document.getElementById('callerPhone').value,
+        source: 'MANUAL'
+    };
+
+    try {
+        const response = await fetch('/api/proxy/incidents', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Add work notes if provided
+            const workNotes = document.getElementById('workNotes').value.trim();
+            if (workNotes) {
+                await fetch(`/api/proxy/incidents/${data.data.id}/notes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken()
+                    },
+                    body: JSON.stringify({ content: workNotes, internal: true })
+                });
+            }
+
+            // Upload attachments if any
+            if (selectedFiles.length > 0) {
+                await uploadAttachments(data.data.id);
+            }
+
+            showNotification(`Incident ${data.data.number} created successfully`, 'success');
+            window.location.href = `/incidents/${data.data.id}`;
+        } else {
+            showError(data.error || 'Failed to create incident');
+        }
+    } catch (error) {
+        console.error('Error creating incident:', error);
+        showError('Failed to create incident');
+    }
+}
+
+async function uploadAttachments(incidentId) {
+    for (const file of selectedFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            await fetch(`/api/proxy/incidents/${incidentId}/attachments`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + getToken()
+                },
+                body: formData
+            });
+        } catch (error) {
+            console.error('Error uploading attachment:', error);
+        }
+    }
+}
+
+function saveDraft() {
+    const formData = {
+        shortDescription: document.getElementById('shortDescription').value,
+        description: document.getElementById('description').value,
+        category: document.getElementById('category').value,
+        subcategory: document.getElementById('subcategory').value,
+        impact: document.getElementById('impact').value,
+        urgency: document.getElementById('urgency').value
+    };
+
+    localStorage.setItem('incidentDraft', JSON.stringify(formData));
+    showNotification('Draft saved', 'success');
+}
+
+// Utility functions
+function getCIIcon(type) {
+    const icons = {
+        'SERVER': 'server',
+        'DATABASE': 'database',
+        'NETWORK_DEVICE': 'network-wired',
+        'APPLICATION': 'window-maximize',
+        'STORAGE': 'hdd',
+        'VIRTUAL_MACHINE': 'cloud'
+    };
+    return icons[type] || 'cube';
+}
+
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': 'file-pdf',
+        'doc': 'file-word',
+        'docx': 'file-word',
+        'xls': 'file-excel',
+        'xlsx': 'file-excel',
+        'png': 'file-image',
+        'jpg': 'file-image',
+        'jpeg': 'file-image',
+        'gif': 'file-image',
+        'log': 'file-alt',
+        'txt': 'file-alt',
+        'zip': 'file-archive',
+        'rar': 'file-archive'
+    };
+    return icons[ext] || 'file';
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function getToken() {
+    return localStorage.getItem('authToken') || '';
+}
+
+function showNotification(message, type) {
+    if (window.showToast) {
+        window.showToast(message, type);
+    } else {
+        alert(message);
+    }
+}
+
+function showError(message) {
+    showNotification(message, 'error');
+}
+
+// Load draft if exists
+document.addEventListener('DOMContentLoaded', function() {
+    const draft = localStorage.getItem('incidentDraft');
+    if (draft) {
+        const loadDraft = confirm('A saved draft was found. Would you like to restore it?');
+        if (loadDraft) {
+            const data = JSON.parse(draft);
+            Object.keys(data).forEach(key => {
+                const el = document.getElementById(key);
+                if (el && data[key]) {
+                    el.value = data[key];
+                }
+            });
+            if (data.category) loadSubcategories();
+            if (data.impact && data.urgency) calculatePriority();
+        }
+        localStorage.removeItem('incidentDraft');
+    }
+});
+</script>
+{% endblock %}

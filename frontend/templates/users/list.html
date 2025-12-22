@@ -1,0 +1,582 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Users - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">User Management</h1>
+        <p class="page-subtitle">Manage platform users and their access</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-primary" onclick="showAddUserModal()">
+            <i class="fas fa-user-plus"></i> Add User
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-users"></i> All Users</h3>
+    </div>
+    <div class="card-body no-padding">
+        <div class="table-responsive">
+            <table class="data-table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Teams</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr data-user-id="{{ user.id }}">
+                        <td>
+                            <div class="user-info">
+                                <span class="avatar avatar-sm">{{ user.firstName[0] }}{{ user.lastName[0] }}</span>
+                                <span>{{ user.firstName }} {{ user.lastName }}</span>
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td><span class="badge badge-{{ user.role|lower }}">{{ user.role }}</span></td>
+                        <td>{{ user.department or '-' }}</td>
+                        <td>
+                            <div class="teams-cell" id="teams-{{ user.id }}">
+                                <span class="text-muted">Loading...</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-{{ 'success' if user.status == 'ACTIVE' else 'warning' }}">{{ user.status }}</span></td>
+                        <td>{{ user.lastLogin|default('-', true) }}</td>
+                        <td>
+                            <button class="btn-icon" title="Edit" onclick="showEditUserModal('{{ user.id }}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon" title="Manage Teams" onclick="showTeamsModal('{{ user.id }}', '{{ user.firstName }} {{ user.lastName }}')"><i class="fas fa-users-cog"></i></button>
+                            <button class="btn-icon text-danger" title="Deactivate" onclick="deactivateUser('{{ user.id }}')"><i class="fas fa-ban"></i></button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">No users found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal" id="addUserModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title"><i class="fas fa-user-plus"></i> Add New User</h4>
+                <button class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
+            </div>
+            <form id="addUserForm" onsubmit="submitAddUser(event)">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name *</label>
+                            <input type="text" name="firstName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name *</label>
+                            <input type="text" name="lastName" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password *</label>
+                        <input type="password" name="password" class="form-control" required minlength="8">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Role *</label>
+                            <select name="role" class="form-control" required>
+                                <option value="OPERATOR">Operator</option>
+                                <option value="MANAGER">Manager</option>
+                                <option value="ADMIN">Admin</option>
+                                <option value="VIEWER">Viewer</option>
+                                <option value="ON_CALL">On-Call</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status" class="form-control">
+                                <option value="ACTIVE">Active</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <input type="text" name="department" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Job Title</label>
+                            <input type="text" name="jobTitle" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal" id="editUserModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title"><i class="fas fa-user-edit"></i> Edit User</h4>
+                <button class="modal-close" onclick="closeModal('editUserModal')">&times;</button>
+            </div>
+            <form id="editUserForm" onsubmit="submitEditUser(event)">
+                <input type="hidden" name="userId" id="editUserId">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name *</label>
+                            <input type="text" name="firstName" id="editFirstName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name *</label>
+                            <input type="text" name="lastName" id="editLastName" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="editEmail" class="form-control" disabled>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Role *</label>
+                            <select name="role" id="editRole" class="form-control" required>
+                                <option value="OPERATOR">Operator</option>
+                                <option value="MANAGER">Manager</option>
+                                <option value="ADMIN">Admin</option>
+                                <option value="VIEWER">Viewer</option>
+                                <option value="ON_CALL">On-Call</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status" id="editStatus" class="form-control">
+                                <option value="ACTIVE">Active</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <input type="text" name="department" id="editDepartment" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Job Title</label>
+                            <input type="text" name="jobTitle" id="editJobTitle" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Teams Modal -->
+<div class="modal" id="teamsModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title"><i class="fas fa-users-cog"></i> Manage Teams for <span id="teamsUserName"></span></h4>
+                <button class="modal-close" onclick="closeModal('teamsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="teamsUserId">
+                <div class="form-group">
+                    <label>Current Teams</label>
+                    <div id="currentTeams" class="teams-list"></div>
+                </div>
+                <hr>
+                <div class="form-group">
+                    <label>Add to Team</label>
+                    <div class="input-group">
+                        <select id="teamSelect" class="form-control">
+                            <option value="">Select a team...</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" onclick="addUserToTeam()">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>All Available Teams</label>
+                    <div id="availableTeams" class="teams-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('teamsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.teams-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.teams-cell .badge {
+    font-size: 11px;
+}
+.teams-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    min-height: 40px;
+}
+.team-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--primary-light);
+    border-radius: 20px;
+    font-size: 13px;
+}
+.team-tag .remove-btn {
+    cursor: pointer;
+    color: var(--danger);
+    font-size: 12px;
+}
+.team-tag .remove-btn:hover {
+    color: var(--danger-dark);
+}
+.input-group {
+    display: flex;
+    gap: 8px;
+}
+.input-group .form-control {
+    flex: 1;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API_URL = '{{ api_url }}';
+let allTeams = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadTeams();
+    loadUserTeams();
+});
+
+async function loadTeams() {
+    try {
+        const response = await fetch(`${API_URL}/api/v1/teams`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            allTeams = data.data;
+            populateTeamSelect();
+        }
+    } catch (error) {
+        console.error('Error loading teams:', error);
+    }
+}
+
+function populateTeamSelect() {
+    const select = document.getElementById('teamSelect');
+    select.innerHTML = '<option value="">Select a team...</option>';
+    allTeams.forEach(team => {
+        select.innerHTML += `<option value="${team.id}">${team.name}</option>`;
+    });
+}
+
+async function loadUserTeams() {
+    const rows = document.querySelectorAll('#usersTable tbody tr[data-user-id]');
+    for (const row of rows) {
+        const userId = row.dataset.userId;
+        try {
+            const response = await fetch(`${API_URL}/api/v1/users/${userId}`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            const data = await response.json();
+            if (data.success && data.data.teams) {
+                const teamsCell = document.getElementById(`teams-${userId}`);
+                if (data.data.teams.length > 0) {
+                    teamsCell.innerHTML = data.data.teams.map(tm =>
+                        `<span class="badge badge-info">${tm.team.name}</span>`
+                    ).join(' ');
+                } else {
+                    teamsCell.innerHTML = '<span class="text-muted">No teams</span>';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading user teams:', error);
+        }
+    }
+}
+
+function showAddUserModal() {
+    document.getElementById('addUserForm').reset();
+    document.getElementById('addUserModal').classList.add('show');
+}
+
+async function showEditUserModal(userId) {
+    try {
+        const response = await fetch(`${API_URL}/api/v1/users/${userId}`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            const user = data.data;
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editFirstName').value = user.firstName;
+            document.getElementById('editLastName').value = user.lastName;
+            document.getElementById('editEmail').value = user.email;
+            document.getElementById('editRole').value = user.role;
+            document.getElementById('editStatus').value = user.status;
+            document.getElementById('editDepartment').value = user.department || '';
+            document.getElementById('editJobTitle').value = user.jobTitle || '';
+            document.getElementById('editUserModal').classList.add('show');
+        }
+    } catch (error) {
+        showToast('Failed to load user details', 'error');
+    }
+}
+
+async function showTeamsModal(userId, userName) {
+    document.getElementById('teamsUserId').value = userId;
+    document.getElementById('teamsUserName').textContent = userName;
+
+    try {
+        const response = await fetch(`${API_URL}/api/v1/users/${userId}`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        const data = await response.json();
+
+        const currentTeamsDiv = document.getElementById('currentTeams');
+        const availableTeamsDiv = document.getElementById('availableTeams');
+
+        const userTeamIds = data.data.teams ? data.data.teams.map(tm => tm.team.id) : [];
+
+        // Show current teams
+        if (userTeamIds.length > 0) {
+            currentTeamsDiv.innerHTML = data.data.teams.map(tm => `
+                <div class="team-tag">
+                    <i class="fas fa-users"></i> ${tm.team.name}
+                    <span class="remove-btn" onclick="removeUserFromTeam('${tm.team.id}', '${userId}')" title="Remove from team">
+                        <i class="fas fa-times"></i>
+                    </span>
+                </div>
+            `).join('');
+        } else {
+            currentTeamsDiv.innerHTML = '<span class="text-muted">Not a member of any team</span>';
+        }
+
+        // Show available teams (not yet joined)
+        const availableTeams = allTeams.filter(t => !userTeamIds.includes(t.id));
+        if (availableTeams.length > 0) {
+            availableTeamsDiv.innerHTML = availableTeams.map(team => `
+                <div class="team-tag" style="background: var(--bg-secondary);">
+                    <i class="fas fa-users"></i> ${team.name}
+                    <span class="remove-btn" style="color: var(--success);" onclick="addUserToTeamDirect('${team.id}', '${userId}')" title="Add to team">
+                        <i class="fas fa-plus"></i>
+                    </span>
+                </div>
+            `).join('');
+        } else {
+            availableTeamsDiv.innerHTML = '<span class="text-muted">User is a member of all teams</span>';
+        }
+
+        document.getElementById('teamsModal').classList.add('show');
+    } catch (error) {
+        showToast('Failed to load team information', 'error');
+    }
+}
+
+async function submitAddUser(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+
+    try {
+        const response = await fetch(`${API_URL}/api/v1/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast('User created successfully', 'success');
+            closeModal('addUserModal');
+            location.reload();
+        } else {
+            showToast(result.error || 'Failed to create user', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to create user', 'error');
+    }
+}
+
+async function submitEditUser(event) {
+    event.preventDefault();
+    const userId = document.getElementById('editUserId').value;
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    delete data.userId;
+
+    try {
+        const response = await fetch(`${API_URL}/api/v1/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast('User updated successfully', 'success');
+            closeModal('editUserModal');
+            location.reload();
+        } else {
+            showToast(result.error || 'Failed to update user', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to update user', 'error');
+    }
+}
+
+async function addUserToTeam() {
+    const teamId = document.getElementById('teamSelect').value;
+    const userId = document.getElementById('teamsUserId').value;
+
+    if (!teamId) {
+        showToast('Please select a team', 'warning');
+        return;
+    }
+
+    await addUserToTeamDirect(teamId, userId);
+}
+
+async function addUserToTeamDirect(teamId, userId) {
+    try {
+        const response = await fetch(`${API_URL}/api/v1/teams/${teamId}/members`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({ userId, role: 'MEMBER' })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast('User added to team', 'success');
+            showTeamsModal(userId, document.getElementById('teamsUserName').textContent);
+            loadUserTeams();
+        } else {
+            showToast(result.error || 'Failed to add user to team', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to add user to team', 'error');
+    }
+}
+
+async function removeUserFromTeam(teamId, userId) {
+    if (!confirm('Remove user from this team?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/v1/teams/${teamId}/members/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast('User removed from team', 'success');
+            showTeamsModal(userId, document.getElementById('teamsUserName').textContent);
+            loadUserTeams();
+        } else {
+            showToast(result.error || 'Failed to remove user from team', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to remove user from team', 'error');
+    }
+}
+
+async function deactivateUser(userId) {
+    if (!confirm('Are you sure you want to deactivate this user?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/api/v1/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({ status: 'INACTIVE' })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast('User deactivated', 'success');
+            location.reload();
+        } else {
+            showToast(result.error || 'Failed to deactivate user', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to deactivate user', 'error');
+    }
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('show');
+}
+
+function getToken() {
+    return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || '';
+}
+
+function showToast(message, type = 'info') {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 24px;border-radius:8px;z-index:9999;color:white;background:' +
+        (type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6');
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

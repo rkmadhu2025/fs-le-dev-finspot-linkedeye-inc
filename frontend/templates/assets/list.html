@@ -1,0 +1,625 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Assets & CMDB - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Assets & CMDB</h1>
+        <p class="page-subtitle">Configuration Management Database - Track all infrastructure assets</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="showTopologyView()">
+            <i class="fas fa-project-diagram"></i> Topology
+        </button>
+        <button class="btn btn-secondary" onclick="importAssets()">
+            <i class="fas fa-upload"></i> Import
+        </button>
+        <a href="{{ url_for('asset_create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Asset
+        </a>
+    </div>
+</div>
+
+<!-- Asset Overview -->
+<div class="stats-grid stats-grid-5">
+    <div class="stat-card clickable" onclick="filterByType('SERVER')">
+        <div class="stat-icon stat-icon-blue">
+            <i class="fas fa-server"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-servers">0</span>
+            <span class="stat-label">Servers</span>
+        </div>
+    </div>
+    <div class="stat-card clickable" onclick="filterByType('DATABASE')">
+        <div class="stat-icon stat-icon-purple">
+            <i class="fas fa-database"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-databases">0</span>
+            <span class="stat-label">Databases</span>
+        </div>
+    </div>
+    <div class="stat-card clickable" onclick="filterByType('NETWORK_DEVICE')">
+        <div class="stat-icon stat-icon-green">
+            <i class="fas fa-network-wired"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-network">0</span>
+            <span class="stat-label">Network Devices</span>
+        </div>
+    </div>
+    <div class="stat-card clickable" onclick="filterByType('APPLICATION')">
+        <div class="stat-icon stat-icon-orange">
+            <i class="fas fa-window-maximize"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-applications">0</span>
+            <span class="stat-label">Applications</span>
+        </div>
+    </div>
+    <div class="stat-card clickable" onclick="filterByStatus('MAINTENANCE')">
+        <div class="stat-icon stat-icon-yellow">
+            <i class="fas fa-tools"></i>
+        </div>
+        <div class="stat-content">
+            <span class="stat-value" id="stat-maintenance">0</span>
+            <span class="stat-label">In Maintenance</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters & View Toggle -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-filter"></i> Filters</h3>
+        <div class="view-toggle">
+            <button class="view-btn active" data-view="table" onclick="setView('table')">
+                <i class="fas fa-table"></i>
+            </button>
+            <button class="view-btn" data-view="grid" onclick="setView('grid')">
+                <i class="fas fa-th-large"></i>
+            </button>
+            <button class="view-btn" data-view="tree" onclick="setView('tree')">
+                <i class="fas fa-sitemap"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="filters-grid">
+            <div class="form-group">
+                <label class="form-label">Search</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="form-input" id="filter-search" placeholder="Name, IP, hostname...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Type</label>
+                <select class="form-select" id="filter-type">
+                    <option value="">All Types</option>
+                    <option value="SERVER">Server</option>
+                    <option value="DATABASE">Database</option>
+                    <option value="NETWORK_DEVICE">Network Device</option>
+                    <option value="APPLICATION">Application</option>
+                    <option value="STORAGE">Storage</option>
+                    <option value="VIRTUAL_MACHINE">Virtual Machine</option>
+                    <option value="CONTAINER">Container</option>
+                    <option value="LOAD_BALANCER">Load Balancer</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-select" id="filter-status">
+                    <option value="">All Statuses</option>
+                    <option value="LIVE">Live</option>
+                    <option value="MAINTENANCE">Maintenance</option>
+                    <option value="DECOMMISSIONED">Decommissioned</option>
+                    <option value="PLANNED">Planned</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select class="form-select" id="filter-category">
+                    <option value="">All Categories</option>
+                    <option value="Production">Production</option>
+                    <option value="Staging">Staging</option>
+                    <option value="Development">Development</option>
+                    <option value="Network">Network</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data Center</label>
+                <select class="form-select" id="filter-datacenter">
+                    <option value="">All Locations</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">OS</label>
+                <select class="form-select" id="filter-os">
+                    <option value="">All OS</option>
+                    <option value="Ubuntu">Ubuntu</option>
+                    <option value="CentOS">CentOS</option>
+                    <option value="RHEL">RHEL</option>
+                    <option value="Windows">Windows Server</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assets Table View -->
+<div class="card" id="table-view">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-cubes"></i> Configuration Items</h3>
+        <span class="results-count"><span id="total-count">0</span> assets</span>
+    </div>
+    <div class="card-body no-padding">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>IP Address</th>
+                        <th>OS / Version</th>
+                        <th>Location</th>
+                        <th>Open Incidents</th>
+                        <th>Health</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="assets-tbody">
+                    <tr class="loading-row">
+                        <td colspan="9">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span>Loading assets...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="pagination">
+            <button class="pagination-btn" id="prev-page" disabled>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <div class="pagination-info">
+                Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+            </div>
+            <button class="pagination-btn" id="next-page">
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Assets Grid View -->
+<div class="assets-grid" id="grid-view" style="display: none;">
+    <!-- Grid items rendered here -->
+</div>
+
+<!-- Assets Tree View -->
+<div class="card" id="tree-view" style="display: none;">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-sitemap"></i> Infrastructure Hierarchy</h3>
+    </div>
+    <div class="card-body">
+        <div class="tree-view" id="tree-container">
+            <!-- Tree rendered here -->
+        </div>
+    </div>
+</div>
+
+<!-- Asset Quick View Modal -->
+<div class="modal" id="asset-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3 class="modal-title" id="modal-asset-name">Asset Details</h3>
+            <button class="modal-close" onclick="closeModal('asset-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="modal-asset-body">
+            <!-- Content loaded dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('asset-modal')">Close</button>
+            <a href="#" class="btn btn-primary" id="modal-asset-link">View Full Details</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let filters = {};
+let currentView = 'table';
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAssets();
+    loadStats();
+    loadDataCenters();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    let searchTimeout;
+    document.getElementById('filter-search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filters.search = this.value;
+            currentPage = 1;
+            loadAssets();
+        }, 300);
+    });
+
+    ['filter-type', 'filter-status', 'filter-category', 'filter-datacenter', 'filter-os'].forEach(id => {
+        document.getElementById(id).addEventListener('change', function() {
+            filters[id.replace('filter-', '')] = this.value;
+            currentPage = 1;
+            loadAssets();
+        });
+    });
+
+    document.getElementById('prev-page').addEventListener('click', () => {
+        if (currentPage > 1) { currentPage--; loadAssets(); }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+        currentPage++; loadAssets();
+    });
+}
+
+async function loadAssets() {
+    try {
+        const params = new URLSearchParams({ page: currentPage, limit: 20, ...filters });
+        const response = await fetch(`/api/proxy/assets?${params}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            if (currentView === 'table') renderTableView(data.data);
+            else if (currentView === 'grid') renderGridView(data.data);
+            else if (currentView === 'tree') renderTreeView(data.data);
+            updatePagination(data.pagination);
+            document.getElementById('total-count').textContent = data.pagination?.total || data.data.length;
+        }
+    } catch (error) {
+        console.error('Error loading assets:', error);
+    }
+}
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/proxy/assets/stats', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('stat-servers').textContent = data.data.servers || 0;
+            document.getElementById('stat-databases').textContent = data.data.databases || 0;
+            document.getElementById('stat-network').textContent = data.data.networkDevices || 0;
+            document.getElementById('stat-applications').textContent = data.data.applications || 0;
+            document.getElementById('stat-maintenance').textContent = data.data.maintenance || 0;
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+async function loadDataCenters() {
+    try {
+        const response = await fetch('/api/proxy/assets/datacenters', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            const select = document.getElementById('filter-datacenter');
+            data.data.forEach(dc => {
+                select.innerHTML += `<option value="${dc}">${dc}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error loading data centers:', error);
+    }
+}
+
+function renderTableView(assets) {
+    const tbody = document.getElementById('assets-tbody');
+
+    if (!assets || assets.length === 0) {
+        tbody.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="9">
+                    <div class="empty-state">
+                        <i class="fas fa-cubes"></i>
+                        <h4>No assets found</h4>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = assets.map(asset => `
+        <tr onclick="showAssetDetails('${asset.id}')">
+            <td>
+                <div class="asset-name">
+                    <span class="asset-icon"><i class="fas fa-${getAssetIcon(asset.type)}"></i></span>
+                    <div>
+                        <a href="/assets/${asset.id}" class="asset-link">${asset.name}</a>
+                        <span class="hostname">${asset.hostname || ''}</span>
+                    </div>
+                </div>
+            </td>
+            <td><span class="badge badge-type">${asset.type}</span></td>
+            <td><span class="badge badge-status badge-${asset.status.toLowerCase()}">${asset.status}</span></td>
+            <td><code>${asset.ipAddress || '-'}</code></td>
+            <td>${asset.os ? `${asset.os} ${asset.osVersion || ''}` : '-'}</td>
+            <td>
+                ${asset.dataCenter ? `<span><i class="fas fa-building"></i> ${asset.dataCenter}</span>` : '-'}
+            </td>
+            <td>
+                <span class="incident-count ${asset._count?.incidents > 0 ? 'has-incidents' : ''}">
+                    ${asset._count?.incidents || 0}
+                </span>
+            </td>
+            <td>
+                ${renderHealthIndicator(asset)}
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon" onclick="event.stopPropagation(); openGrafana('${asset.id}')" title="View in Grafana">
+                        <i class="fas fa-chart-line"></i>
+                    </button>
+                    <button class="btn-icon" onclick="event.stopPropagation(); createIncidentForAsset('${asset.id}')" title="Create Incident">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderGridView(assets) {
+    const container = document.getElementById('grid-view');
+
+    if (!assets || assets.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h4>No assets found</h4></div>';
+        return;
+    }
+
+    container.innerHTML = assets.map(asset => `
+        <div class="asset-card" onclick="showAssetDetails('${asset.id}')">
+            <div class="asset-card-header">
+                <span class="asset-type-icon"><i class="fas fa-${getAssetIcon(asset.type)}"></i></span>
+                <span class="badge badge-status badge-${asset.status.toLowerCase()}">${asset.status}</span>
+            </div>
+            <h4 class="asset-card-title">${asset.name}</h4>
+            <div class="asset-card-meta">
+                <span><i class="fas fa-network-wired"></i> ${asset.ipAddress || 'N/A'}</span>
+                <span><i class="fas fa-building"></i> ${asset.dataCenter || 'N/A'}</span>
+            </div>
+            <div class="asset-card-specs">
+                ${asset.cpu ? `<span><i class="fas fa-microchip"></i> ${asset.cpu}</span>` : ''}
+                ${asset.memory ? `<span><i class="fas fa-memory"></i> ${asset.memory}</span>` : ''}
+                ${asset.storage ? `<span><i class="fas fa-hdd"></i> ${asset.storage}</span>` : ''}
+            </div>
+            <div class="asset-card-footer">
+                ${renderHealthIndicator(asset)}
+                <span class="incident-badge">${asset._count?.incidents || 0} incidents</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderTreeView(assets) {
+    const container = document.getElementById('tree-container');
+
+    // Group assets by data center, then by type
+    const grouped = {};
+    assets.forEach(asset => {
+        const dc = asset.dataCenter || 'Unknown';
+        if (!grouped[dc]) grouped[dc] = {};
+        if (!grouped[dc][asset.type]) grouped[dc][asset.type] = [];
+        grouped[dc][asset.type].push(asset);
+    });
+
+    let html = '';
+    Object.entries(grouped).forEach(([dc, types]) => {
+        html += `
+            <div class="tree-node">
+                <div class="tree-node-header" onclick="toggleTreeNode(this)">
+                    <i class="fas fa-chevron-down"></i>
+                    <i class="fas fa-building"></i>
+                    <span>${dc}</span>
+                    <span class="tree-count">${Object.values(types).flat().length} assets</span>
+                </div>
+                <div class="tree-node-children">
+        `;
+
+        Object.entries(types).forEach(([type, assetList]) => {
+            html += `
+                <div class="tree-node">
+                    <div class="tree-node-header" onclick="toggleTreeNode(this)">
+                        <i class="fas fa-chevron-down"></i>
+                        <i class="fas fa-${getAssetIcon(type)}"></i>
+                        <span>${type}</span>
+                        <span class="tree-count">${assetList.length}</span>
+                    </div>
+                    <div class="tree-node-children">
+                        ${assetList.map(asset => `
+                            <div class="tree-leaf" onclick="showAssetDetails('${asset.id}')">
+                                <span class="badge badge-status badge-${asset.status.toLowerCase()}">${asset.status}</span>
+                                <span>${asset.name}</span>
+                                <code>${asset.ipAddress || ''}</code>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div></div>';
+    });
+
+    container.innerHTML = html || '<p class="text-muted text-center">No assets to display</p>';
+}
+
+function renderHealthIndicator(asset) {
+    // Mock health status - would normally come from monitoring integration
+    const health = asset.status === 'LIVE' ? 'healthy' : asset.status === 'MAINTENANCE' ? 'warning' : 'unknown';
+    const icons = {
+        'healthy': '<span class="health-indicator health-good"><i class="fas fa-check-circle"></i></span>',
+        'warning': '<span class="health-indicator health-warning"><i class="fas fa-exclamation-circle"></i></span>',
+        'critical': '<span class="health-indicator health-critical"><i class="fas fa-times-circle"></i></span>',
+        'unknown': '<span class="health-indicator health-unknown"><i class="fas fa-question-circle"></i></span>'
+    };
+    return icons[health];
+}
+
+function setView(view) {
+    currentView = view;
+    document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-view="${view}"]`).classList.add('active');
+
+    document.getElementById('table-view').style.display = view === 'table' ? 'block' : 'none';
+    document.getElementById('grid-view').style.display = view === 'grid' ? 'grid' : 'none';
+    document.getElementById('tree-view').style.display = view === 'tree' ? 'block' : 'none';
+
+    loadAssets();
+}
+
+function toggleTreeNode(header) {
+    const node = header.parentElement;
+    node.classList.toggle('collapsed');
+    const icon = header.querySelector('.fa-chevron-down, .fa-chevron-right');
+    icon.classList.toggle('fa-chevron-down');
+    icon.classList.toggle('fa-chevron-right');
+}
+
+async function showAssetDetails(id) {
+    const modal = document.getElementById('asset-modal');
+    modal.classList.add('active');
+
+    try {
+        const response = await fetch(`/api/proxy/assets/${id}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            const asset = data.data;
+            document.getElementById('modal-asset-name').textContent = asset.name;
+            document.getElementById('modal-asset-link').href = `/assets/${id}`;
+            document.getElementById('modal-asset-body').innerHTML = `
+                <div class="asset-detail-grid">
+                    <div class="detail-section">
+                        <h4>General Information</h4>
+                        <div class="detail-list">
+                            <div class="detail-item"><label>Type</label><span>${asset.type}</span></div>
+                            <div class="detail-item"><label>Status</label><span class="badge badge-status badge-${asset.status.toLowerCase()}">${asset.status}</span></div>
+                            <div class="detail-item"><label>Category</label><span>${asset.category || '-'}</span></div>
+                            <div class="detail-item"><label>Hostname</label><span>${asset.hostname || '-'}</span></div>
+                            <div class="detail-item"><label>IP Address</label><code>${asset.ipAddress || '-'}</code></div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h4>System Information</h4>
+                        <div class="detail-list">
+                            <div class="detail-item"><label>OS</label><span>${asset.os || '-'} ${asset.osVersion || ''}</span></div>
+                            <div class="detail-item"><label>CPU</label><span>${asset.cpu || '-'}</span></div>
+                            <div class="detail-item"><label>Memory</label><span>${asset.memory || '-'}</span></div>
+                            <div class="detail-item"><label>Storage</label><span>${asset.storage || '-'}</span></div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h4>Location</h4>
+                        <div class="detail-list">
+                            <div class="detail-item"><label>Data Center</label><span>${asset.dataCenter || '-'}</span></div>
+                            <div class="detail-item"><label>Location</label><span>${asset.location || '-'}</span></div>
+                            <div class="detail-item"><label>Manufacturer</label><span>${asset.manufacturer || '-'}</span></div>
+                            <div class="detail-item"><label>Model</label><span>${asset.model || '-'}</span></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading asset details:', error);
+    }
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+function filterByType(type) {
+    document.getElementById('filter-type').value = type;
+    filters.type = type;
+    currentPage = 1;
+    loadAssets();
+}
+
+function filterByStatus(status) {
+    document.getElementById('filter-status').value = status;
+    filters.status = status;
+    currentPage = 1;
+    loadAssets();
+}
+
+function updatePagination(pagination) {
+    if (!pagination) return;
+    document.getElementById('current-page').textContent = pagination.page;
+    document.getElementById('total-pages').textContent = pagination.totalPages;
+    document.getElementById('prev-page').disabled = pagination.page <= 1;
+    document.getElementById('next-page').disabled = pagination.page >= pagination.totalPages;
+}
+
+function getAssetIcon(type) {
+    const icons = {
+        'SERVER': 'server',
+        'DATABASE': 'database',
+        'NETWORK_DEVICE': 'network-wired',
+        'APPLICATION': 'window-maximize',
+        'STORAGE': 'hdd',
+        'VIRTUAL_MACHINE': 'cloud',
+        'CONTAINER': 'docker',
+        'LOAD_BALANCER': 'balance-scale'
+    };
+    return icons[type] || 'cube';
+}
+
+function openGrafana(assetId) {
+    window.open(`/integrations/grafana?asset=${assetId}`, '_blank');
+}
+
+function createIncidentForAsset(assetId) {
+    window.location.href = `/incidents/create?configItemId=${assetId}`;
+}
+
+function showTopologyView() {
+    window.location.href = '/network';
+}
+
+function importAssets() {
+    // Would open import modal
+    alert('Import functionality coming soon');
+}
+
+function getToken() {
+    return localStorage.getItem('authToken') || '';
+}
+</script>
+{% endblock %}

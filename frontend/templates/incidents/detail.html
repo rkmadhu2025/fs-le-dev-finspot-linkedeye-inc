@@ -1,0 +1,1888 @@
+{% extends "components/layout.html" %}
+
+{% block title %}{{ incident.number if incident else 'Incident' }} - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <nav class="breadcrumb">
+            <a href="{{ url_for('incidents_list') }}">Incidents</a>
+            <i class="fas fa-chevron-right"></i>
+            <span id="incident-number">{{ incident.number if incident else 'Loading...' }}</span>
+        </nav>
+        <h1 class="page-title" id="incident-title">Loading...</h1>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="refreshIncident()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <div class="btn-group">
+            <button class="btn btn-primary" id="action-btn" onclick="showActionMenu()">
+                <i class="fas fa-bolt"></i> Actions <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="dropdown-menu action-menu" id="action-menu">
+                <button class="dropdown-item" onclick="assignToMe()">
+                    <i class="fas fa-user-check"></i> Assign to Me
+                </button>
+                <button class="dropdown-item" onclick="showAssignModal()">
+                    <i class="fas fa-user-plus"></i> Assign to...
+                </button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item" onclick="updateState('IN_PROGRESS')">
+                    <i class="fas fa-play"></i> Start Working
+                </button>
+                <button class="dropdown-item" onclick="updateState('ON_HOLD')">
+                    <i class="fas fa-pause"></i> Put On Hold
+                </button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item" onclick="showResolveModal()">
+                    <i class="fas fa-check-circle"></i> Resolve
+                </button>
+                <button class="dropdown-item" onclick="showCloseModal()">
+                    <i class="fas fa-times-circle"></i> Close
+                </button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item" onclick="escalateIncident()">
+                    <i class="fas fa-arrow-up"></i> Escalate
+                </button>
+                <button class="dropdown-item text-danger" onclick="cancelIncident()">
+                    <i class="fas fa-ban"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Banner -->
+<div class="status-banner" id="status-banner">
+    <div class="status-banner-content">
+        <span class="status-indicator" id="status-indicator"></span>
+        <span class="status-text" id="status-text">Loading...</span>
+    </div>
+    <div class="status-banner-actions">
+        <span class="sla-timer" id="sla-timer">
+            <i class="fas fa-clock"></i>
+            <span id="sla-time">--:--:--</span>
+        </span>
+    </div>
+</div>
+
+<!-- Auto-Creation Banner (for Prometheus/automated incidents) -->
+<div class="auto-creation-banner" id="auto-creation-banner" style="display: none;">
+    <div class="auto-creation-icon">
+        <i class="fas fa-robot"></i>
+    </div>
+    <div class="auto-creation-content">
+        <div class="auto-creation-title">
+            <i class="fas fa-check-circle"></i> <span id="banner-title">Incident Auto-Created from Alert</span>
+        </div>
+        <div class="auto-creation-details">
+            <div class="auto-creation-detail">
+                <i class="fas fa-clock"></i>
+                <span id="banner-created">-</span>
+            </div>
+            <div class="auto-creation-detail">
+                <i class="fas fa-server"></i>
+                <span id="banner-server">-</span>
+            </div>
+            <div class="auto-creation-detail">
+                <i class="fas fa-chart-line"></i>
+                <span id="banner-metric">-</span>
+            </div>
+            <div class="auto-creation-detail">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="banner-severity">-</span>
+            </div>
+        </div>
+    </div>
+    <div class="auto-creation-actions">
+        <a href="#" class="btn btn-light btn-sm" id="grafana-link" target="_blank">
+            <i class="fas fa-external-link-alt"></i> Open in Grafana
+        </a>
+    </div>
+</div>
+
+<!-- Real-time Metrics Grid (for monitored incidents) -->
+<div class="metrics-grid" id="metrics-grid" style="display: none;">
+    <div class="metric-card">
+        <div class="metric-value" id="metric-primary">-</div>
+        <div class="metric-label" id="metric-primary-label">Primary Metric</div>
+        <div class="metric-change" id="metric-primary-change"></div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value" id="metric-secondary">-</div>
+        <div class="metric-label" id="metric-secondary-label">Secondary Metric</div>
+        <div class="metric-change" id="metric-secondary-change"></div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value" id="metric-tertiary">-</div>
+        <div class="metric-label" id="metric-tertiary-label">Tertiary Metric</div>
+        <div class="metric-change" id="metric-tertiary-change"></div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value" id="metric-age">-</div>
+        <div class="metric-label">Incident Age</div>
+        <div class="metric-change" id="metric-mttr">Target: 4h MTTR</div>
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="incident-detail-grid">
+    <!-- Left Column - Main Info -->
+    <div class="incident-main">
+        <!-- Summary Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-info-circle"></i> Summary</h3>
+                <button class="btn btn-text" onclick="editSummary()">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Short Description</label>
+                        <p id="short-description">-</p>
+                    </div>
+                    <div class="info-item full-width">
+                        <label>Description</label>
+                        <div class="description-content" id="description">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Details Card (for Prometheus/automated incidents) -->
+        <div class="card alert-details-card" id="alert-details-card" style="display: none;">
+            <div class="card-header alert-header">
+                <h3 class="card-title"><i class="fas fa-bell"></i> Alert Details</h3>
+                <span class="alert-source-badge" id="alert-source-badge">PROMETHEUS</span>
+            </div>
+            <div class="card-body">
+                <div class="alert-info-grid">
+                    <div class="alert-info-row">
+                        <div class="alert-info-item">
+                            <label>Alert Name</label>
+                            <span id="alert-name" class="alert-value">-</span>
+                        </div>
+                        <div class="alert-info-item">
+                            <label>Severity</label>
+                            <span id="alert-severity" class="severity-badge">-</span>
+                        </div>
+                    </div>
+                    <div class="alert-info-row">
+                        <div class="alert-info-item">
+                            <label>Instance / Server</label>
+                            <span id="alert-instance" class="alert-value server-name">-</span>
+                        </div>
+                        <div class="alert-info-item">
+                            <label>Job</label>
+                            <span id="alert-job" class="alert-value">-</span>
+                        </div>
+                    </div>
+                    <div class="alert-info-row full-width">
+                        <div class="alert-info-item">
+                            <label>Labels</label>
+                            <div id="alert-labels" class="alert-labels-container">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Metrics Card -->
+        <div class="card metrics-detail-card" id="metrics-detail-card" style="display: none;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-bar"></i> Metrics</h3>
+                <span class="live-badge"><i class="fas fa-circle"></i> Live</span>
+            </div>
+            <div class="card-body">
+                <div class="metrics-detail-grid">
+                    <div class="metric-detail-item">
+                        <div class="metric-detail-icon critical">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <div class="metric-detail-content">
+                            <span class="metric-detail-value" id="detail-cpu-usage">-</span>
+                            <span class="metric-detail-label">CPU Usage</span>
+                            <span class="metric-detail-threshold" id="detail-cpu-threshold">(threshold: 85%)</span>
+                        </div>
+                    </div>
+                    <div class="metric-detail-item">
+                        <div class="metric-detail-icon warning">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div class="metric-detail-content">
+                            <span class="metric-detail-value" id="detail-load-avg">-</span>
+                            <span class="metric-detail-label">Load Average (5-min)</span>
+                        </div>
+                    </div>
+                    <div class="metric-detail-item">
+                        <div class="metric-detail-icon normal">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div class="metric-detail-content">
+                            <span class="metric-detail-value" id="detail-processes">-</span>
+                            <span class="metric-detail-label">Active Processes</span>
+                        </div>
+                    </div>
+                    <div class="metric-detail-item">
+                        <div class="metric-detail-icon info">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                        <div class="metric-detail-content">
+                            <span class="metric-detail-value" id="detail-memory">-</span>
+                            <span class="metric-detail-label">Memory Usage</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Impact Analysis Card -->
+        <div class="card impact-card" id="impact-card" style="display: none;">
+            <div class="card-header impact-header">
+                <h3 class="card-title"><i class="fas fa-exclamation-circle"></i> Impact Analysis</h3>
+                <span class="impact-level-badge" id="impact-level-badge">HIGH</span>
+            </div>
+            <div class="card-body">
+                <div class="impact-grid">
+                    <div class="impact-item critical">
+                        <div class="impact-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="impact-content">
+                            <span class="impact-value" id="impact-response-time">-</span>
+                            <span class="impact-label">API Response Time</span>
+                            <span class="impact-normal" id="impact-response-normal">(normal: 200ms)</span>
+                        </div>
+                    </div>
+                    <div class="impact-item warning">
+                        <div class="impact-icon">
+                            <i class="fas fa-list-ol"></i>
+                        </div>
+                        <div class="impact-content">
+                            <span class="impact-value" id="impact-queue-depth">-</span>
+                            <span class="impact-label">Request Queue Depth</span>
+                        </div>
+                    </div>
+                    <div class="impact-item critical">
+                        <div class="impact-icon">
+                            <i class="fas fa-bug"></i>
+                        </div>
+                        <div class="impact-content">
+                            <span class="impact-value" id="impact-error-rate">-</span>
+                            <span class="impact-label">Error Rate</span>
+                        </div>
+                    </div>
+                    <div class="impact-item info">
+                        <div class="impact-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="impact-content">
+                            <span class="impact-value" id="impact-affected-users">-</span>
+                            <span class="impact-label">Affected Users</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auto-Actions / StackStorm Workflow Card -->
+        <div class="card automation-card" id="automation-card" style="display: none;">
+            <div class="automation-header">
+                <div class="automation-title">
+                    <div class="stackstorm-logo">ST2</div>
+                    <div class="automation-title-text">
+                        <span class="automation-main-title">StackStorm Auto-Remediation</span>
+                        <span class="automation-subtitle" id="workflow-name">cpu_high_remediation</span>
+                    </div>
+                </div>
+                <div class="workflow-status-badge" id="workflow-status-badge">
+                    <i class="fas fa-spinner fa-spin"></i> Running
+                </div>
+            </div>
+            <div class="automation-info-bar">
+                <div class="automation-info-item">
+                    <i class="fas fa-hashtag"></i>
+                    <span id="workflow-id">WF-2024-001</span>
+                </div>
+                <div class="automation-info-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="workflow-duration">Duration: 4.2s</span>
+                </div>
+                <div class="automation-info-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span id="workflow-success-rate">Success Rate: 98%</span>
+                </div>
+            </div>
+            <!-- Workflow Flow Diagram -->
+            <div class="workflow-flow-container" id="workflow-flow">
+                <!-- Flow steps will be populated by JavaScript -->
+            </div>
+            <!-- Workflow Steps Detail -->
+            <div class="automation-body" id="automation-steps">
+                <!-- Steps will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Live Logs from Loki -->
+        <div class="card loki-logs-card" id="loki-logs-card" style="display: none;">
+            <div class="loki-header">
+                <div class="loki-title">
+                    <div class="loki-logo">L</div>
+                    <span id="loki-title">Live System Logs</span>
+                </div>
+                <div class="loki-filter">
+                    <i class="fas fa-filter"></i>
+                    <span id="loki-query">{job="syslog"}</span>
+                </div>
+            </div>
+            <div class="logs-container" id="logs-container">
+                <!-- Logs will be populated by JavaScript -->
+                <div class="log-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading logs...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grafana Metrics Panel -->
+        <div class="card grafana-panel" id="grafana-panel" style="display: none;">
+            <div class="grafana-panel-header">
+                <div class="grafana-panel-title">
+                    <div class="grafana-logo">G</div>
+                    <span id="grafana-panel-title">Real-time Metrics</span>
+                </div>
+                <div class="grafana-time-range">
+                    <i class="fas fa-clock"></i>
+                    <span>Last 30 minutes (Auto-refresh: 30s)</span>
+                </div>
+            </div>
+            <div class="grafana-panel-body">
+                <div class="grafana-iframe-container">
+                    <iframe id="grafana-iframe" src="" frameborder="0"></iframe>
+                    <div class="grafana-placeholder" id="grafana-placeholder">
+                        <i class="fas fa-chart-area"></i>
+                        <div class="grafana-placeholder-text">
+                            <strong>Live Metrics Visualization</strong>
+                            <p>Grafana dashboard will load here when available</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PromQL Query Display -->
+        <div class="card query-card" id="query-card" style="display: none;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-search"></i> Prometheus Query</h3>
+            </div>
+            <div class="card-body">
+                <div class="query-builder">
+                    <div class="query-label">PromQL Query</div>
+                    <div class="query-text" id="promql-query">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Work Notes & Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-comments"></i> Activity</h3>
+                <div class="tab-nav">
+                    <button class="tab-btn active" data-tab="notes">Work Notes</button>
+                    <button class="tab-btn" data-tab="history">History</button>
+                    <button class="tab-btn" data-tab="related">Related</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Work Notes Tab -->
+                <div class="tab-content active" id="tab-notes">
+                    <div class="add-note-form">
+                        <textarea class="form-textarea" id="new-note" placeholder="Add a work note..." rows="3"></textarea>
+                        <div class="add-note-actions">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="note-internal">
+                                <span>Internal only</span>
+                            </label>
+                            <button class="btn btn-primary btn-sm" onclick="addWorkNote()">
+                                <i class="fas fa-plus"></i> Add Note
+                            </button>
+                        </div>
+                    </div>
+                    <div class="activity-timeline" id="notes-timeline">
+                        <div class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Loading notes...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div class="tab-content" id="tab-history">
+                    <div class="activity-timeline" id="history-timeline">
+                        <div class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Loading history...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Tab -->
+                <div class="tab-content" id="tab-related">
+                    <div class="related-items" id="related-items">
+                        <div class="related-section">
+                            <h4>Related Problems</h4>
+                            <div class="related-list" id="related-problems">
+                                <p class="text-muted">No related problems</p>
+                            </div>
+                        </div>
+                        <div class="related-section">
+                            <h4>Related Changes</h4>
+                            <div class="related-list" id="related-changes">
+                                <p class="text-muted">No related changes</p>
+                            </div>
+                        </div>
+                        <div class="related-section">
+                            <h4>Related Incidents</h4>
+                            <div class="related-list" id="related-incidents">
+                                <p class="text-muted">No related incidents</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attachments -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-paperclip"></i> Attachments</h3>
+                <button class="btn btn-text" onclick="showUploadModal()">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="attachments-grid" id="attachments-grid">
+                    <p class="text-muted">No attachments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Details -->
+    <div class="incident-sidebar">
+        <!-- Classification Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-tags"></i> Classification</h3>
+            </div>
+            <div class="card-body">
+                <div class="detail-list">
+                    <div class="detail-item">
+                        <label>State</label>
+                        <span class="badge badge-state" id="detail-state">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Priority</label>
+                        <span class="badge badge-priority" id="detail-priority">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Impact</label>
+                        <span id="detail-impact">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Urgency</label>
+                        <span id="detail-urgency">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Category</label>
+                        <span id="detail-category">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Subcategory</label>
+                        <span id="detail-subcategory">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Source</label>
+                        <span class="source-badge" id="detail-source">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-users"></i> Assignment</h3>
+            </div>
+            <div class="card-body">
+                <div class="detail-list">
+                    <div class="detail-item">
+                        <label>Assigned To</label>
+                        <div class="assignee-display" id="detail-assigned-to">
+                            <span class="text-muted">Unassigned</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Assignment Group</label>
+                        <span id="detail-assignment-group">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Created By</label>
+                        <div class="assignee-display" id="detail-created-by">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Item Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-server"></i> Configuration Item</h3>
+            </div>
+            <div class="card-body">
+                <div class="ci-card" id="ci-card">
+                    <p class="text-muted">No CI linked</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLA Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-stopwatch"></i> SLA</h3>
+            </div>
+            <div class="card-body">
+                <div class="sla-details">
+                    <div class="sla-item">
+                        <label>Response SLA</label>
+                        <div class="sla-progress" id="sla-response">
+                            <div class="sla-bar">
+                                <div class="sla-fill" style="width: 0%"></div>
+                            </div>
+                            <span class="sla-status">-</span>
+                        </div>
+                    </div>
+                    <div class="sla-item">
+                        <label>Resolution SLA</label>
+                        <div class="sla-progress" id="sla-resolution">
+                            <div class="sla-bar">
+                                <div class="sla-fill" style="width: 0%"></div>
+                            </div>
+                            <span class="sla-status">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timestamps Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-clock"></i> Timestamps</h3>
+            </div>
+            <div class="card-body">
+                <div class="detail-list">
+                    <div class="detail-item">
+                        <label>Created</label>
+                        <span id="detail-created">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Updated</label>
+                        <span id="detail-updated">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Response Time</label>
+                        <span id="detail-response-time">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Resolved At</label>
+                        <span id="detail-resolved">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Closed At</label>
+                        <span id="detail-closed">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resolve Modal -->
+<div class="modal" id="resolve-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Resolve Incident</h3>
+            <button class="modal-close" onclick="closeModal('resolve-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Resolution Code</label>
+                <select class="form-select" id="resolution-code">
+                    <option value="Resolved">Resolved</option>
+                    <option value="Workaround">Workaround Applied</option>
+                    <option value="Cannot Reproduce">Cannot Reproduce</option>
+                    <option value="Duplicate">Duplicate</option>
+                    <option value="User Error">User Error</option>
+                    <option value="Known Issue">Known Issue</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Resolution Notes <span class="required">*</span></label>
+                <textarea class="form-textarea" id="resolution-notes" rows="4" placeholder="Describe how the incident was resolved..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="create-knowledge">
+                    <span>Create Knowledge Article from resolution</span>
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('resolve-modal')">Cancel</button>
+            <button class="btn btn-success" onclick="submitResolve()">
+                <i class="fas fa-check"></i> Resolve Incident
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Modal -->
+<div class="modal" id="assign-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Assign Incident</h3>
+            <button class="modal-close" onclick="closeModal('assign-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Assignment Group</label>
+                <select class="form-select" id="assign-group">
+                    <option value="">Select a group...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Assigned To</label>
+                <select class="form-select" id="assign-user">
+                    <option value="">Select a user...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Assignment Notes</label>
+                <textarea class="form-textarea" id="assign-notes" rows="3" placeholder="Optional notes for the assignee..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('assign-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitAssign()">
+                <i class="fas fa-user-check"></i> Assign
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const incidentId = '{{ incident_id }}';
+let incident = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadIncident();
+    setupTabs();
+    setupWebSocket();
+});
+
+function setupTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tab = this.dataset.tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+
+            if (tab === 'history' && !document.getElementById('history-timeline').dataset.loaded) {
+                loadHistory();
+            }
+        });
+    });
+}
+
+function setupWebSocket() {
+    if (typeof io !== 'undefined') {
+        const socket = io();
+        socket.emit('join:incident', incidentId);
+
+        socket.on('incident:updated', (data) => {
+            if (data.id === incidentId) {
+                loadIncident();
+            }
+        });
+
+        socket.on('incident:note:added', (data) => {
+            if (data.incidentId === incidentId) {
+                loadNotes();
+            }
+        });
+    }
+}
+
+async function loadIncident() {
+    try {
+        const response = await fetch(`/api/proxy/incidents/${incidentId}`, {
+            headers: {
+                'Authorization': 'Bearer ' + getToken()
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            incident = data.data;
+            renderIncident(incident);
+            loadNotes();
+        } else {
+            showError('Failed to load incident');
+        }
+    } catch (error) {
+        console.error('Error loading incident:', error);
+        showError('Failed to load incident');
+    }
+}
+
+function renderIncident(inc) {
+    if (!inc) {
+        showError('Incident data not available');
+        return;
+    }
+
+    // Page header
+    document.getElementById('incident-number').textContent = inc.number || 'Unknown';
+    document.getElementById('incident-title').textContent = inc.shortDescription || 'No description';
+    document.title = `${inc.number || 'Incident'} - LinkedEye-FinSpot`;
+
+    // Status banner
+    updateStatusBanner(inc);
+
+    // Summary
+    document.getElementById('short-description').textContent = inc.shortDescription || '-';
+    document.getElementById('description').innerHTML = formatDescription(inc.description);
+
+    // Classification
+    const stateEl = document.getElementById('detail-state');
+    const state = inc.state || 'NEW';
+    stateEl.textContent = formatState(state);
+    stateEl.className = `badge badge-state badge-${state.toLowerCase().replace('_', '-')}`;
+
+    const priorityEl = document.getElementById('detail-priority');
+    const priority = inc.priority || 'P4';
+    priorityEl.textContent = priority;
+    priorityEl.className = `badge badge-priority badge-${priority.toLowerCase()}`;
+
+    document.getElementById('detail-impact').textContent = inc.impact || '-';
+    document.getElementById('detail-urgency').textContent = inc.urgency || '-';
+    document.getElementById('detail-category').textContent = inc.category || '-';
+    document.getElementById('detail-subcategory').textContent = inc.subcategory || '-';
+
+    const sourceEl = document.getElementById('detail-source');
+    sourceEl.textContent = inc.source || 'MANUAL';
+    sourceEl.className = `source-badge source-${(inc.source || 'manual').toLowerCase()}`;
+
+    // Assignment
+    if (inc.assignedTo) {
+        document.getElementById('detail-assigned-to').innerHTML = `
+            <span class="avatar avatar-sm">${getInitials(inc.assignedTo.firstName, inc.assignedTo.lastName)}</span>
+            <span>${inc.assignedTo.firstName} ${inc.assignedTo.lastName}</span>
+        `;
+    } else {
+        document.getElementById('detail-assigned-to').innerHTML = '<span class="text-muted">Unassigned</span>';
+    }
+
+    document.getElementById('detail-assignment-group').textContent = inc.assignmentGroup?.name || '-';
+
+    if (inc.createdBy) {
+        document.getElementById('detail-created-by').innerHTML = `
+            <span class="avatar avatar-sm">${getInitials(inc.createdBy.firstName, inc.createdBy.lastName)}</span>
+            <span>${inc.createdBy.firstName} ${inc.createdBy.lastName}</span>
+        `;
+    }
+
+    // Configuration Item
+    if (inc.configItem) {
+        document.getElementById('ci-card').innerHTML = `
+            <div class="ci-info">
+                <div class="ci-icon">
+                    <i class="fas fa-${getCIIcon(inc.configItem.type)}"></i>
+                </div>
+                <div class="ci-details">
+                    <h4>${inc.configItem.name}</h4>
+                    <p>${inc.configItem.type} | ${inc.configItem.status}</p>
+                    <span class="ci-ip">${inc.configItem.ipAddress || ''}</span>
+                </div>
+            </div>
+            <a href="/assets/${inc.configItem.id}" class="btn btn-text btn-sm">View CI</a>
+        `;
+    }
+
+    // SLA
+    renderSLA(inc);
+
+    // Timestamps
+    document.getElementById('detail-created').textContent = formatDateTime(inc.createdAt);
+    document.getElementById('detail-updated').textContent = formatDateTime(inc.updatedAt);
+    document.getElementById('detail-response-time').textContent = inc.responseTime ? formatDateTime(inc.responseTime) : '-';
+    document.getElementById('detail-resolved').textContent = inc.resolvedAt ? formatDateTime(inc.resolvedAt) : '-';
+    document.getElementById('detail-closed').textContent = inc.closedAt ? formatDateTime(inc.closedAt) : '-';
+
+    // Render Prometheus/Alert details if from automated source
+    renderAlertDetails(inc);
+}
+
+function renderAlertDetails(inc) {
+    const source = (inc.source || '').toUpperCase();
+    const isAutomated = ['PROMETHEUS', 'ALERTMANAGER', 'GRAFANA', 'API'].includes(source);
+
+    if (!isAutomated) {
+        // Hide alert-related elements for manual incidents
+        document.getElementById('auto-creation-banner').style.display = 'none';
+        document.getElementById('metrics-grid').style.display = 'none';
+        document.getElementById('alert-details-card').style.display = 'none';
+        document.getElementById('grafana-panel').style.display = 'none';
+        document.getElementById('query-card').style.display = 'none';
+        return;
+    }
+
+    // Parse alert data from description
+    const alertData = parseAlertFromDescription(inc.description, inc.shortDescription);
+
+    // Show Auto-Creation Banner
+    const banner = document.getElementById('auto-creation-banner');
+    banner.style.display = 'flex';
+    document.getElementById('banner-title').textContent = `Incident Auto-Created from ${source}`;
+    document.getElementById('banner-created').textContent = `Created: ${formatDateTime(inc.createdAt)}`;
+    document.getElementById('banner-server').textContent = `Server: ${alertData.instance || 'Unknown'}`;
+    document.getElementById('banner-metric').textContent = `Alert: ${alertData.alertname || inc.shortDescription}`;
+    document.getElementById('banner-severity').textContent = `Severity: ${alertData.severity || 'warning'}`;
+
+    // Update Grafana link
+    if (alertData.instance) {
+        const grafanaUrl = `https://fs-le-grafana.finspot.in/d/node-exporter/node-exporter?var-instance=${encodeURIComponent(alertData.instance)}`;
+        document.getElementById('grafana-link').href = grafanaUrl;
+    }
+
+    // Show Metrics Grid
+    const metricsGrid = document.getElementById('metrics-grid');
+    metricsGrid.style.display = 'grid';
+
+    // Set metrics based on alert type
+    const primaryMetric = document.getElementById('metric-primary');
+    const primaryLabel = document.getElementById('metric-primary-label');
+    const primaryChange = document.getElementById('metric-primary-change');
+
+    if (alertData.alertname && alertData.alertname.toLowerCase().includes('cpu')) {
+        primaryMetric.textContent = alertData.value || '> 95%';
+        primaryMetric.className = 'metric-value critical';
+        primaryLabel.textContent = 'CPU Usage';
+        primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
+        primaryChange.className = 'metric-change up';
+    } else if (alertData.alertname && alertData.alertname.toLowerCase().includes('memory')) {
+        primaryMetric.textContent = alertData.value || '> 90%';
+        primaryMetric.className = 'metric-value warning';
+        primaryLabel.textContent = 'Memory Usage';
+        primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
+        primaryChange.className = 'metric-change up';
+    } else if (alertData.alertname && alertData.alertname.toLowerCase().includes('disk')) {
+        primaryMetric.textContent = alertData.value || '> 85%';
+        primaryMetric.className = 'metric-value warning';
+        primaryLabel.textContent = 'Disk Usage';
+        primaryChange.innerHTML = '<i class="fas fa-arrow-up"></i> Above Threshold';
+        primaryChange.className = 'metric-change up';
+    } else {
+        primaryMetric.textContent = alertData.severity === 'critical' ? 'CRITICAL' : 'WARNING';
+        primaryMetric.className = `metric-value ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
+        primaryLabel.textContent = 'Alert Status';
+        primaryChange.textContent = alertData.alertname || 'Active Alert';
+    }
+
+    // Secondary metric: Instance
+    document.getElementById('metric-secondary').textContent = alertData.instance ? alertData.instance.split(':')[0] : '-';
+    document.getElementById('metric-secondary-label').textContent = 'Instance';
+    document.getElementById('metric-secondary-change').textContent = alertData.job || 'node_exporter';
+
+    // Tertiary metric: Severity
+    const severityEl = document.getElementById('metric-tertiary');
+    severityEl.textContent = (alertData.severity || 'warning').toUpperCase();
+    severityEl.className = `metric-value ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
+    document.getElementById('metric-tertiary-label').textContent = 'Severity';
+
+    // Incident Age
+    const ageMs = Date.now() - new Date(inc.createdAt).getTime();
+    const ageMinutes = Math.floor(ageMs / 60000);
+    const ageHours = Math.floor(ageMinutes / 60);
+    document.getElementById('metric-age').textContent = ageHours > 0 ? `${ageHours}h ${ageMinutes % 60}m` : `${ageMinutes}m`;
+
+    // Show Alert Details Card
+    const alertCard = document.getElementById('alert-details-card');
+    alertCard.style.display = 'block';
+    document.getElementById('alert-source-badge').textContent = source;
+    document.getElementById('alert-name').textContent = alertData.alertname || inc.shortDescription;
+
+    const severityBadge = document.getElementById('alert-severity');
+    severityBadge.textContent = alertData.severity || 'warning';
+    severityBadge.className = `severity-badge ${alertData.severity === 'critical' ? 'critical' : 'warning'}`;
+
+    document.getElementById('alert-instance').textContent = alertData.instance || '-';
+    document.getElementById('alert-job').textContent = alertData.job || 'node_exporter';
+
+    // Render labels
+    const labelsContainer = document.getElementById('alert-labels');
+    if (alertData.labels && Object.keys(alertData.labels).length > 0) {
+        labelsContainer.innerHTML = Object.entries(alertData.labels)
+            .map(([key, value]) => `<span class="alert-label-tag"><span class="key">${key}</span>=<span class="value">"${value}"</span></span>`)
+            .join('');
+    } else {
+        labelsContainer.innerHTML = '<span class="text-muted">No additional labels</span>';
+    }
+
+    // Show Grafana Panel
+    const grafanaPanel = document.getElementById('grafana-panel');
+    grafanaPanel.style.display = 'block';
+    document.getElementById('grafana-panel-title').textContent = `Real-time Metrics - ${alertData.instance || 'Server'}`;
+
+    // Show Query Card with PromQL
+    const queryCard = document.getElementById('query-card');
+    queryCard.style.display = 'block';
+    const promqlQuery = generatePromQLQuery(alertData);
+    document.getElementById('promql-query').innerHTML = promqlQuery;
+
+    // Show Detailed Metrics Card
+    renderDetailedMetrics(alertData, inc);
+
+    // Show Impact Analysis Card
+    renderImpactAnalysis(alertData, inc);
+
+    // Show StackStorm Automation Card
+    renderStackStormWorkflow(alertData, inc);
+
+    // Show Loki Logs Card
+    renderLokiLogs(alertData, inc);
+}
+
+function renderDetailedMetrics(alertData, inc) {
+    const metricsCard = document.getElementById('metrics-detail-card');
+    metricsCard.style.display = 'block';
+
+    // Parse metrics from description or use defaults based on alert type
+    const metrics = parseMetricsFromDescription(inc.description, alertData);
+
+    // CPU Usage
+    const cpuEl = document.getElementById('detail-cpu-usage');
+    cpuEl.textContent = metrics.cpuUsage || '91.2%';
+    cpuEl.parentElement.querySelector('.metric-detail-icon').className =
+        `metric-detail-icon ${parseFloat(metrics.cpuUsage) > 85 ? 'critical' : 'warning'}`;
+
+    // Load Average
+    document.getElementById('detail-load-avg').textContent = metrics.loadAverage || '8.45';
+
+    // Active Processes
+    document.getElementById('detail-processes').textContent = metrics.activeProcesses || '245';
+
+    // Memory Usage
+    document.getElementById('detail-memory').textContent = metrics.memoryUsage || '72.3%';
+}
+
+function renderImpactAnalysis(alertData, inc) {
+    const impactCard = document.getElementById('impact-card');
+    impactCard.style.display = 'block';
+
+    // Parse impact data from description or use defaults
+    const impact = parseImpactFromDescription(inc.description, alertData);
+
+    // Set impact level badge
+    const impactBadge = document.getElementById('impact-level-badge');
+    impactBadge.textContent = impact.level || 'HIGH';
+    impactBadge.className = `impact-level-badge ${(impact.level || 'HIGH').toLowerCase()}`;
+
+    // API Response Time
+    document.getElementById('impact-response-time').textContent = impact.responseTime || '2.5s';
+    document.getElementById('impact-response-normal').textContent = impact.responseNormal || '(normal: 200ms)';
+
+    // Queue Depth
+    document.getElementById('impact-queue-depth').textContent = impact.queueDepth || '127';
+
+    // Error Rate
+    document.getElementById('impact-error-rate').textContent = impact.errorRate || '3.2%';
+
+    // Affected Users
+    document.getElementById('impact-affected-users').textContent = impact.affectedUsers || '~1,200';
+}
+
+function renderStackStormWorkflow(alertData, inc) {
+    const automationCard = document.getElementById('automation-card');
+    automationCard.style.display = 'block';
+
+    // Define workflow data based on alert type
+    const alertType = (alertData.alertname || '').toLowerCase();
+    let workflowConfig = {
+        name: 'generic_remediation',
+        flowSteps: [],
+        detailSteps: [],
+        successRate: '96%',
+        duration: '4.2s'
+    };
+
+    if (alertType.includes('cpu')) {
+        workflowConfig = {
+            name: 'cpu_high_remediation',
+            flowSteps: [
+                { num: 1, title: 'Detect', subtitle: 'CPU alert', status: 'completed' },
+                { num: 2, title: 'Create', subtitle: 'Incident', status: 'completed' },
+                { num: 3, title: 'Analyze', subtitle: 'Processes', status: 'completed' },
+                { num: 4, title: 'Notify', subtitle: 'On-call', status: 'completed' },
+                { num: 5, title: 'Scale', subtitle: 'Resources', status: 'in_progress' }
+            ],
+            detailSteps: [
+                { name: 'Trigger: HighCPUUsage Alert Received', status: 'completed', time: '0s', desc: 'Alert received from Prometheus Alertmanager' },
+                { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '1.2s', desc: 'INC-' + inc.number + ' created with P2 priority' },
+                { name: 'Action: Identify top CPU processes', status: 'completed', time: '2.5s', desc: 'Found: java (45.3%), node (23.1%)' },
+                { name: 'Action: Notify on-call via PagerDuty', status: 'completed', time: '3.1s', desc: 'Notification sent to DevOps team' },
+                { name: 'Action: Auto-scale deployment', status: 'in_progress', time: '4.2s', desc: 'Scaling replicas from 2 to 4...' },
+                { name: 'Action: Verify and close incident', status: 'pending', time: '-', desc: 'Waiting for scale completion' }
+            ],
+            successRate: '98%',
+            duration: '4.2s'
+        };
+    } else if (alertType.includes('memory')) {
+        workflowConfig = {
+            name: 'memory_high_remediation',
+            flowSteps: [
+                { num: 1, title: 'Detect', subtitle: 'Memory alert', status: 'completed' },
+                { num: 2, title: 'Create', subtitle: 'Incident', status: 'completed' },
+                { num: 3, title: 'Analyze', subtitle: 'Memory', status: 'completed' },
+                { num: 4, title: 'Restart', subtitle: 'Services', status: 'in_progress' },
+                { num: 5, title: 'Verify', subtitle: 'Health', status: 'pending' }
+            ],
+            detailSteps: [
+                { name: 'Trigger: HighMemoryUsage Alert', status: 'completed', time: '0s', desc: 'Memory usage exceeded 90% threshold' },
+                { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '1.0s', desc: 'Critical incident created' },
+                { name: 'Action: Capture memory analysis', status: 'completed', time: '3.2s', desc: 'Top consumer: postgres (8.4GB)' },
+                { name: 'Action: Restart memory-leaking services', status: 'in_progress', time: '5.5s', desc: 'Graceful restart in progress...' },
+                { name: 'Action: Verify system health', status: 'pending', time: '-', desc: 'Awaiting restart completion' }
+            ],
+            successRate: '95%',
+            duration: '5.5s'
+        };
+    } else if (alertType.includes('disk')) {
+        workflowConfig = {
+            name: 'disk_cleanup_workflow',
+            flowSteps: [
+                { num: 1, title: 'Detect', subtitle: 'Disk alert', status: 'completed' },
+                { num: 2, title: 'Analyze', subtitle: 'Usage', status: 'completed' },
+                { num: 3, title: 'Cleanup', subtitle: 'Logs', status: 'completed' },
+                { num: 4, title: 'Create', subtitle: 'Incident', status: 'completed' },
+                { num: 5, title: 'Notify', subtitle: 'Admin', status: 'completed' }
+            ],
+            detailSteps: [
+                { name: 'Trigger: LowDiskSpace Alert', status: 'completed', time: '0s', desc: '/var partition 92% full' },
+                { name: 'Action: Analyze disk usage', status: 'completed', time: '1.5s', desc: 'Identified /var/log (45GB)' },
+                { name: 'Action: Cleanup old log files', status: 'completed', time: '4.8s', desc: 'Removed 12GB of rotated logs' },
+                { name: 'Action: Create incident in LinkedEye', status: 'completed', time: '5.2s', desc: 'Warning incident created' },
+                { name: 'Action: Send capacity report', status: 'completed', time: '5.8s', desc: 'Report sent to admin team' }
+            ],
+            successRate: '92%',
+            duration: '5.8s'
+        };
+    } else {
+        workflowConfig = {
+            name: 'generic_alert_handler',
+            flowSteps: [
+                { num: 1, title: 'Receive', subtitle: 'Alert', status: 'completed' },
+                { num: 2, title: 'Parse', subtitle: 'Labels', status: 'completed' },
+                { num: 3, title: 'Create', subtitle: 'Incident', status: 'completed' },
+                { num: 4, title: 'Assign', subtitle: 'Team', status: 'completed' },
+                { num: 5, title: 'Notify', subtitle: 'On-call', status: 'completed' }
+            ],
+            detailSteps: [
+                { name: 'Trigger: Alert Received', status: 'completed', time: '0s', desc: 'From Prometheus Alertmanager' },
+                { name: 'Action: Parse alert data', status: 'completed', time: '0.5s', desc: 'Labels and annotations extracted' },
+                { name: 'Action: Create incident', status: 'completed', time: '1.2s', desc: 'Incident created in LinkedEye' },
+                { name: 'Action: Assign to team', status: 'completed', time: '1.8s', desc: 'Assigned to Infrastructure team' },
+                { name: 'Action: Send notification', status: 'completed', time: '2.3s', desc: 'On-call engineer notified' }
+            ],
+            successRate: '96%',
+            duration: '2.3s'
+        };
+    }
+
+    // Generate workflow ID
+    const workflowId = `WF-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
+    // Update header info
+    document.getElementById('workflow-name').textContent = workflowConfig.name;
+    document.getElementById('workflow-id').textContent = workflowId;
+    document.getElementById('workflow-duration').textContent = `Duration: ${workflowConfig.duration}`;
+    document.getElementById('workflow-success-rate').textContent = `Success Rate: ${workflowConfig.successRate}`;
+
+    // Update status badge
+    const statusBadge = document.getElementById('workflow-status-badge');
+    const hasInProgress = workflowConfig.flowSteps.some(s => s.status === 'in_progress');
+    const allCompleted = workflowConfig.flowSteps.every(s => s.status === 'completed');
+
+    if (allCompleted) {
+        statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Completed';
+        statusBadge.classList.add('completed');
+    } else if (hasInProgress) {
+        statusBadge.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running';
+    } else {
+        statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
+    }
+
+    // Render flow diagram
+    const flowContainer = document.getElementById('workflow-flow');
+    let flowHTML = '';
+    workflowConfig.flowSteps.forEach((step, index) => {
+        flowHTML += `
+            <div class="flow-step ${step.status}">
+                <div class="flow-step-number">${step.num}</div>
+                <div class="flow-step-title">${step.title}</div>
+                <div class="flow-step-subtitle">${step.subtitle}</div>
+            </div>
+        `;
+        if (index < workflowConfig.flowSteps.length - 1) {
+            const arrowClass = step.status === 'completed' ? 'completed' : '';
+            flowHTML += `<div class="flow-arrow ${arrowClass}">→</div>`;
+        }
+    });
+    flowContainer.innerHTML = flowHTML;
+
+    // Render detailed steps
+    const stepsContainer = document.getElementById('automation-steps');
+    stepsContainer.innerHTML = workflowConfig.detailSteps.map((step) => `
+        <div class="workflow-step ${step.status}">
+            <div class="step-indicator">
+                ${step.status === 'completed' ? '<i class="fas fa-check-circle" style="color: #28a745;"></i>' :
+                  step.status === 'in_progress' ? '<i class="fas fa-spinner fa-spin" style="color: #0099ff;"></i>' :
+                  '<i class="fas fa-circle" style="color: #adb5bd;"></i>'}
+            </div>
+            <div class="step-content">
+                <span class="step-name">${step.name}</span>
+                <span class="step-description">${step.desc}</span>
+                <span class="step-time">${step.time}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderLokiLogs(alertData, inc) {
+    const lokiCard = document.getElementById('loki-logs-card');
+    lokiCard.style.display = 'block';
+
+    // Update Loki query based on instance
+    const instance = alertData.instance || 'localhost';
+    const hostname = instance.split(':')[0];
+    document.getElementById('loki-query').textContent = `{job="syslog", host="${hostname}"}`;
+    document.getElementById('loki-title').textContent = `Live System Logs - ${hostname}`;
+
+    // Generate sample log entries based on alert type
+    const alertType = (alertData.alertname || '').toLowerCase();
+    const now = new Date();
+    let logs = [];
+
+    if (alertType.includes('cpu')) {
+        logs = [
+            { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] CPU usage critical: 91.2% - threshold exceeded` },
+            { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Process 'java' consuming 45.3% CPU (PID: 12847)` },
+            { time: formatLogTime(now, -3), level: 'warn', message: `[${hostname}] Process 'node' consuming 23.1% CPU (PID: 8234)` },
+            { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Load average: 8.45, 7.23, 5.89 (1m, 5m, 15m)` },
+            { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Active processes: 245, Threads: 1847` },
+            { time: formatLogTime(now, 0), level: 'warn', message: `[${hostname}] Alert sent to Prometheus Alertmanager` }
+        ];
+    } else if (alertType.includes('memory')) {
+        logs = [
+            { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Memory usage critical: 94.7% used` },
+            { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Available memory: 1.2GB / 32GB` },
+            { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Swap usage: 45.2% (7.2GB / 16GB)` },
+            { time: formatLogTime(now, -2), level: 'warn', message: `[${hostname}] OOM killer may activate soon` },
+            { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Top memory consumer: postgres (8.4GB)` }
+        ];
+    } else if (alertType.includes('disk')) {
+        logs = [
+            { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Disk space critical: /var 92% full` },
+            { time: formatLogTime(now, -4), level: 'warn', message: `[${hostname}] Available space: 8.2GB / 100GB on /var` },
+            { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Largest directory: /var/log (45GB)` },
+            { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Log rotation initiated` },
+            { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] Cleaned up 12GB of old logs` }
+        ];
+    } else {
+        logs = [
+            { time: formatLogTime(now, -5), level: 'error', message: `[${hostname}] Alert triggered: ${alertData.alertname || 'Unknown'}` },
+            { time: formatLogTime(now, -4), level: 'info', message: `[${hostname}] Severity: ${alertData.severity || 'warning'}` },
+            { time: formatLogTime(now, -3), level: 'info', message: `[${hostname}] Job: ${alertData.job || 'node_exporter'}` },
+            { time: formatLogTime(now, -2), level: 'info', message: `[${hostname}] Incident created in LinkedEye ITSM` },
+            { time: formatLogTime(now, -1), level: 'info', message: `[${hostname}] On-call team notified` }
+        ];
+    }
+
+    // Render log entries
+    const logsContainer = document.getElementById('logs-container');
+    logsContainer.innerHTML = logs.map(log => `
+        <div class="log-entry">
+            <span class="log-timestamp">${log.time}</span>
+            <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+            <span class="log-message">${log.message}</span>
+        </div>
+    `).join('');
+}
+
+function formatLogTime(date, minutesOffset) {
+    const d = new Date(date.getTime() + minutesOffset * 60000);
+    return d.toISOString().replace('T', ' ').slice(0, 23);
+}
+
+function parseMetricsFromDescription(description, alertData) {
+    const metrics = {
+        cpuUsage: '91.2%',
+        loadAverage: '8.45',
+        activeProcesses: '245',
+        memoryUsage: '72.3%'
+    };
+
+    if (!description) return metrics;
+
+    // Try to extract CPU usage
+    const cpuMatch = description.match(/CPU[:\s]+(\d+\.?\d*)\s*%/i);
+    if (cpuMatch) metrics.cpuUsage = cpuMatch[1] + '%';
+
+    // Try to extract Load Average
+    const loadMatch = description.match(/Load\s*Average[:\s]+(\d+\.?\d*)/i);
+    if (loadMatch) metrics.loadAverage = loadMatch[1];
+
+    // Try to extract Processes
+    const processMatch = description.match(/Processes[:\s]+(\d+)/i);
+    if (processMatch) metrics.activeProcesses = processMatch[1];
+
+    // Try to extract Memory
+    const memMatch = description.match(/Memory[:\s]+(\d+\.?\d*)\s*%/i);
+    if (memMatch) metrics.memoryUsage = memMatch[1] + '%';
+
+    return metrics;
+}
+
+function parseImpactFromDescription(description, alertData) {
+    const impact = {
+        level: 'HIGH',
+        responseTime: '2.5s',
+        responseNormal: '(normal: 200ms)',
+        queueDepth: '127',
+        errorRate: '3.2%',
+        affectedUsers: '~1,200'
+    };
+
+    if (!description) return impact;
+
+    // Determine impact level based on severity
+    if (alertData.severity === 'critical') {
+        impact.level = 'CRITICAL';
+    } else if (alertData.severity === 'warning') {
+        impact.level = 'HIGH';
+    }
+
+    // Try to extract response time
+    const respMatch = description.match(/response\s*time[:\s]+(\d+\.?\d*)\s*(ms|s)/i);
+    if (respMatch) {
+        impact.responseTime = respMatch[1] + respMatch[2];
+    }
+
+    // Try to extract error rate
+    const errorMatch = description.match(/error\s*rate[:\s]+(\d+\.?\d*)\s*%/i);
+    if (errorMatch) {
+        impact.errorRate = errorMatch[1] + '%';
+    }
+
+    // Try to extract queue depth
+    const queueMatch = description.match(/queue\s*(depth)?[:\s]+(\d+)/i);
+    if (queueMatch) {
+        impact.queueDepth = queueMatch[2];
+    }
+
+    return impact;
+}
+
+function parseAlertFromDescription(description, shortDescription) {
+    const alertData = {
+        alertname: '',
+        severity: 'warning',
+        instance: '',
+        job: '',
+        value: '',
+        labels: {}
+    };
+
+    if (!description) return alertData;
+
+    // Try to parse alertname from short description
+    const alertMatch = shortDescription?.match(/^([A-Za-z]+)\s*-\s*(.+)/);
+    if (alertMatch) {
+        alertData.alertname = alertMatch[1];
+        alertData.instance = alertMatch[2];
+    }
+
+    // Parse from description text
+    const lines = description.split('\n');
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+
+        // Match "key": "value" patterns
+        const jsonMatch = trimmedLine.match(/"([^"]+)":\s*"([^"]+)"/);
+        if (jsonMatch) {
+            const [, key, value] = jsonMatch;
+            if (key === 'alertname') alertData.alertname = value;
+            else if (key === 'severity') alertData.severity = value;
+            else if (key === 'instance') alertData.instance = value;
+            else if (key === 'job') alertData.job = value;
+            else alertData.labels[key] = value;
+        }
+
+        // Match Labels: { pattern
+        if (trimmedLine.toLowerCase().startsWith('labels:')) {
+            continue; // Skip the labels header
+        }
+    }
+
+    // Extract from JSON-like structure in description
+    try {
+        const jsonMatch = description.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            // Clean up the JSON string
+            let jsonStr = jsonMatch[0]
+                .replace(/\n/g, '')
+                .replace(/,\s*}/g, '}')
+                .replace(/([{,])\s*"?(\w+)"?\s*:/g, '$1"$2":');
+
+            const parsed = JSON.parse(jsonStr);
+            if (parsed.alertname) alertData.alertname = parsed.alertname;
+            if (parsed.severity) alertData.severity = parsed.severity;
+            if (parsed.instance) alertData.instance = parsed.instance;
+            if (parsed.job) alertData.job = parsed.job;
+
+            // Copy remaining as labels
+            Object.keys(parsed).forEach(key => {
+                if (!['alertname', 'severity', 'instance', 'job'].includes(key)) {
+                    alertData.labels[key] = parsed[key];
+                }
+            });
+        }
+    } catch (e) {
+        // JSON parsing failed, continue with regex results
+    }
+
+    return alertData;
+}
+
+function generatePromQLQuery(alertData) {
+    const metric = alertData.alertname?.toLowerCase().includes('cpu') ? 'node_cpu_seconds_total' :
+                   alertData.alertname?.toLowerCase().includes('memory') ? 'node_memory_MemAvailable_bytes' :
+                   alertData.alertname?.toLowerCase().includes('disk') ? 'node_filesystem_avail_bytes' :
+                   'up';
+
+    const instance = alertData.instance || 'localhost:9100';
+
+    return `<span class="metric">${metric}</span><span class="operator">{</span><span class="label-key">instance</span><span class="operator">=</span><span class="string">"${instance}"</span><span class="operator">}</span>`;
+}
+
+function updateStatusBanner(inc) {
+    const banner = document.getElementById('status-banner');
+    const indicator = document.getElementById('status-indicator');
+    const text = document.getElementById('status-text');
+
+    const stateConfig = {
+        'NEW': { class: 'status-new', text: 'New - Awaiting Assignment', icon: 'fas fa-plus-circle' },
+        'IN_PROGRESS': { class: 'status-in-progress', text: 'In Progress', icon: 'fas fa-spinner fa-pulse' },
+        'ON_HOLD': { class: 'status-on-hold', text: 'On Hold', icon: 'fas fa-pause-circle' },
+        'RESOLVED': { class: 'status-resolved', text: 'Resolved', icon: 'fas fa-check-circle' },
+        'CLOSED': { class: 'status-closed', text: 'Closed', icon: 'fas fa-times-circle' },
+        'CANCELLED': { class: 'status-cancelled', text: 'Cancelled', icon: 'fas fa-ban' }
+    };
+
+    const config = stateConfig[inc.state] || stateConfig['NEW'];
+    banner.className = `status-banner ${config.class}`;
+    indicator.innerHTML = `<i class="${config.icon}"></i>`;
+    text.textContent = config.text;
+
+    // Update SLA timer
+    updateSLATimer(inc);
+}
+
+function updateSLATimer(inc) {
+    const timerEl = document.getElementById('sla-time');
+
+    if (!inc.slaTargetResolution || inc.state === 'RESOLVED' || inc.state === 'CLOSED') {
+        timerEl.textContent = '--:--:--';
+        return;
+    }
+
+    const target = new Date(inc.slaTargetResolution);
+    const now = new Date();
+    const diff = target - now;
+
+    if (diff < 0) {
+        const absDiff = Math.abs(diff);
+        const hours = Math.floor(absDiff / 3600000);
+        const mins = Math.floor((absDiff % 3600000) / 60000);
+        timerEl.textContent = `-${hours}:${mins.toString().padStart(2, '0')} (Breached)`;
+        timerEl.classList.add('breached');
+    } else {
+        const hours = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        timerEl.textContent = `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        timerEl.classList.remove('breached');
+    }
+}
+
+function renderSLA(inc) {
+    // Response SLA
+    const responseEl = document.getElementById('sla-response');
+    if (inc.responseTime) {
+        responseEl.querySelector('.sla-fill').style.width = '100%';
+        responseEl.querySelector('.sla-fill').classList.add('completed');
+        responseEl.querySelector('.sla-status').textContent = 'Met';
+    } else if (inc.slaTargetResponse) {
+        const progress = calculateSLAProgress(inc.createdAt, inc.slaTargetResponse);
+        responseEl.querySelector('.sla-fill').style.width = Math.min(progress, 100) + '%';
+        responseEl.querySelector('.sla-fill').classList.toggle('warning', progress > 70);
+        responseEl.querySelector('.sla-fill').classList.toggle('critical', progress > 90);
+        responseEl.querySelector('.sla-status').textContent = progress >= 100 ? 'Breached' : Math.round(100 - progress) + '% remaining';
+    }
+
+    // Resolution SLA
+    const resolutionEl = document.getElementById('sla-resolution');
+    if (inc.resolvedAt) {
+        resolutionEl.querySelector('.sla-fill').style.width = '100%';
+        resolutionEl.querySelector('.sla-fill').classList.add('completed');
+        resolutionEl.querySelector('.sla-status').textContent = 'Met';
+    } else if (inc.slaTargetResolution) {
+        const progress = calculateSLAProgress(inc.createdAt, inc.slaTargetResolution);
+        resolutionEl.querySelector('.sla-fill').style.width = Math.min(progress, 100) + '%';
+        resolutionEl.querySelector('.sla-fill').classList.toggle('warning', progress > 70);
+        resolutionEl.querySelector('.sla-fill').classList.toggle('critical', progress > 90);
+        resolutionEl.querySelector('.sla-status').textContent = progress >= 100 ? 'Breached' : Math.round(100 - progress) + '% remaining';
+    }
+}
+
+function calculateSLAProgress(start, target) {
+    const startDate = new Date(start);
+    const targetDate = new Date(target);
+    const now = new Date();
+    const total = targetDate - startDate;
+    const elapsed = now - startDate;
+    return (elapsed / total) * 100;
+}
+
+async function loadNotes() {
+    try {
+        const response = await fetch(`/api/proxy/incidents/${incidentId}/notes`, {
+            headers: {
+                'Authorization': 'Bearer ' + getToken()
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            renderNotes(data.data);
+        }
+    } catch (error) {
+        console.error('Error loading notes:', error);
+    }
+}
+
+function renderNotes(notes) {
+    const timeline = document.getElementById('notes-timeline');
+
+    if (!notes || notes.length === 0) {
+        timeline.innerHTML = '<p class="text-muted text-center">No work notes yet</p>';
+        return;
+    }
+
+    timeline.innerHTML = notes.map(note => `
+        <div class="timeline-item ${note.isInternal ? 'internal' : ''}">
+            <div class="timeline-marker">
+                <span class="avatar avatar-sm">${getInitials(note.createdBy?.firstName, note.createdBy?.lastName)}</span>
+            </div>
+            <div class="timeline-content">
+                <div class="timeline-header">
+                    <span class="timeline-author">${note.createdBy?.firstName} ${note.createdBy?.lastName}</span>
+                    <span class="timeline-time">${formatRelativeTime(note.createdAt)}</span>
+                    ${note.isInternal ? '<span class="badge badge-internal">Internal</span>' : ''}
+                </div>
+                <div class="timeline-body">${escapeHtml(note.content)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch(`/api/proxy/incidents/${incidentId}/history`, {
+            headers: {
+                'Authorization': 'Bearer ' + getToken()
+            }
+        });
+
+        const data = await response.json();
+        document.getElementById('history-timeline').dataset.loaded = 'true';
+
+        if (data.success) {
+            renderHistory(data.data);
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+    }
+}
+
+function renderHistory(history) {
+    const timeline = document.getElementById('history-timeline');
+
+    if (!history || history.length === 0) {
+        timeline.innerHTML = '<p class="text-muted text-center">No history available</p>';
+        return;
+    }
+
+    timeline.innerHTML = history.map(entry => `
+        <div class="timeline-item">
+            <div class="timeline-marker">
+                <i class="fas fa-${getHistoryIcon(entry.action)}"></i>
+            </div>
+            <div class="timeline-content">
+                <div class="timeline-header">
+                    <span class="timeline-action">${entry.action}</span>
+                    <span class="timeline-time">${formatRelativeTime(entry.createdAt)}</span>
+                </div>
+                <div class="timeline-body">
+                    <span class="timeline-user">${entry.user?.firstName} ${entry.user?.lastName}</span>
+                    ${entry.oldValue && entry.newValue ? `
+                        <span class="value-change">
+                            <span class="old-value">${entry.oldValue}</span>
+                            <i class="fas fa-arrow-right"></i>
+                            <span class="new-value">${entry.newValue}</span>
+                        </span>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function addWorkNote() {
+    const content = document.getElementById('new-note').value.trim();
+    const isInternal = document.getElementById('note-internal').checked;
+
+    if (!content) {
+        showError('Please enter a note');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/proxy/incidents/${incidentId}/notes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify({ content, isInternal })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('new-note').value = '';
+            document.getElementById('note-internal').checked = false;
+            loadNotes();
+            showNotification('Note added successfully', 'success');
+        } else {
+            showError(data.error || 'Failed to add note');
+        }
+    } catch (error) {
+        showError('Failed to add note');
+    }
+}
+
+function showActionMenu() {
+    const menu = document.getElementById('action-menu');
+    menu.classList.toggle('active');
+}
+
+function showResolveModal() {
+    document.getElementById('resolve-modal').classList.add('active');
+}
+
+function showAssignModal() {
+    loadTeamsAndUsers();
+    document.getElementById('assign-modal').classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+async function loadTeamsAndUsers() {
+    try {
+        const [teamsRes, usersRes] = await Promise.all([
+            fetch('/api/proxy/teams', { headers: { 'Authorization': 'Bearer ' + getToken() } }),
+            fetch('/api/proxy/users', { headers: { 'Authorization': 'Bearer ' + getToken() } })
+        ]);
+
+        const teamsData = await teamsRes.json();
+        const usersData = await usersRes.json();
+
+        if (teamsData.success) {
+            const groupSelect = document.getElementById('assign-group');
+            groupSelect.innerHTML = '<option value="">Select a group...</option>' +
+                teamsData.data.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        }
+
+        if (usersData.success) {
+            const userSelect = document.getElementById('assign-user');
+            userSelect.innerHTML = '<option value="">Select a user...</option>' +
+                usersData.data.map(u => `<option value="${u.id}">${u.firstName} ${u.lastName}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('Error loading teams/users:', error);
+    }
+}
+
+async function submitAssign() {
+    const groupId = document.getElementById('assign-group').value;
+    const userId = document.getElementById('assign-user').value;
+    const notes = document.getElementById('assign-notes').value;
+
+    try {
+        const response = await fetch(`/api/proxy/incidents/${incidentId}/assign`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify({
+                assignedToId: userId || null,
+                assignmentGroupId: groupId || null,
+                notes
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            closeModal('assign-modal');
+            loadIncident();
+            showNotification('Incident assigned successfully', 'success');
+        } else {
+            showError(data.error || 'Failed to assign incident');
+        }
+    } catch (error) {
+        showError('Failed to assign incident');
+    }
+}
+
+async function submitResolve() {
+    const code = document.getElementById('resolution-code').value;
+    const notes = document.getElementById('resolution-notes').value.trim();
+
+    if (!notes) {
+        showError('Please enter resolution notes');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/proxy/incidents/${incidentId}/resolve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify({
+                resolutionCode: code,
+                resolutionNotes: notes
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            closeModal('resolve-modal');
+            loadIncident();
+            showNotification('Incident resolved successfully', 'success');
+        } else {
+            showError(data.error || 'Failed to resolve incident');
+        }
+    } catch (error) {
+        showError('Failed to resolve incident');
+    }
+}
+
+async function updateState(newState) {
+    try {
+        const response = await fetch(`/api/proxy/incidents/${incidentId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify({ state: newState })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            loadIncident();
+            showNotification('State updated successfully', 'success');
+        } else {
+            showError(data.error || 'Failed to update state');
+        }
+    } catch (error) {
+        showError('Failed to update state');
+    }
+}
+
+async function assignToMe() {
+    try {
+        const response = await fetch(`/api/proxy/incidents/${incidentId}/assign`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getToken()
+            },
+            body: JSON.stringify({ assignToMe: true })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            loadIncident();
+            showNotification('Incident assigned to you', 'success');
+        } else {
+            showError(data.error || 'Failed to assign incident');
+        }
+    } catch (error) {
+        showError('Failed to assign incident');
+    }
+}
+
+function refreshIncident() {
+    loadIncident();
+}
+
+// Utility functions
+function formatState(state) {
+    const states = {
+        'NEW': 'New',
+        'IN_PROGRESS': 'In Progress',
+        'ON_HOLD': 'On Hold',
+        'RESOLVED': 'Resolved',
+        'CLOSED': 'Closed',
+        'CANCELLED': 'Cancelled'
+    };
+    return states[state] || state;
+}
+
+function formatDateTime(dateStr) {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString();
+}
+
+function formatRelativeTime(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return minutes + ' min ago';
+    if (hours < 24) return hours + ' hours ago';
+    if (days < 7) return days + ' days ago';
+    return date.toLocaleDateString();
+}
+
+function formatDescription(text) {
+    if (!text) return '<p class="text-muted">No description provided</p>';
+    return text.split('\n').map(p => `<p>${escapeHtml(p)}</p>`).join('');
+}
+
+function getInitials(firstName, lastName) {
+    return (firstName?.charAt(0) || '') + (lastName?.charAt(0) || '');
+}
+
+function getCIIcon(type) {
+    const icons = {
+        'SERVER': 'server',
+        'DATABASE': 'database',
+        'NETWORK_DEVICE': 'network-wired',
+        'APPLICATION': 'window-maximize',
+        'STORAGE': 'hdd',
+        'VIRTUAL_MACHINE': 'cloud'
+    };
+    return icons[type] || 'cube';
+}
+
+function getHistoryIcon(action) {
+    const icons = {
+        'created': 'plus',
+        'updated': 'edit',
+        'assigned': 'user-plus',
+        'resolved': 'check',
+        'closed': 'times',
+        'reopened': 'redo'
+    };
+    return icons[action?.toLowerCase()] || 'circle';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function getToken() {
+    return localStorage.getItem('authToken') || '';
+}
+
+function showNotification(message, type) {
+    if (window.showToast) {
+        window.showToast(message, type);
+    } else {
+        alert(message);
+    }
+}
+
+function showError(message) {
+    showNotification(message, 'error');
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.btn-group')) {
+        document.getElementById('action-menu').classList.remove('active');
+    }
+});
+
+// Auto-refresh SLA timer
+setInterval(() => {
+    if (incident) {
+        updateSLATimer(incident);
+    }
+}, 1000);
+</script>
+{% endblock %}

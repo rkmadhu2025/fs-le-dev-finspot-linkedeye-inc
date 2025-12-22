@@ -1,0 +1,154 @@
+{% extends "components/layout.html" %}
+
+{% block title %}Create Change - LinkedEye-FinSpot{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <nav class="breadcrumb">
+            <a href="{{ url_for('changes_list') }}">Changes</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Create New</span>
+        </nav>
+        <h1 class="page-title">Create Change Request</h1>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+        <button class="btn btn-primary" onclick="submitChange()">
+            <i class="fas fa-save"></i> Create Change
+        </button>
+    </div>
+</div>
+
+<form id="change-form" class="create-form">
+    <div class="form-grid">
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-info-circle"></i> Change Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Short Description <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="shortDescription" name="shortDescription" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="required">*</span></label>
+                        <textarea class="form-textarea" id="description" name="description" rows="4" required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Type <span class="required">*</span></label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="">Select type...</option>
+                                <option value="STANDARD">Standard</option>
+                                <option value="NORMAL">Normal</option>
+                                <option value="EMERGENCY">Emergency</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Risk Level <span class="required">*</span></label>
+                            <select class="form-select" id="riskLevel" name="riskLevel" required>
+                                <option value="">Select risk...</option>
+                                <option value="LOW">Low</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="HIGH">High</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Planned Start Date</label>
+                            <input type="datetime-local" class="form-input" id="plannedStartDate" name="plannedStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Planned End Date</label>
+                            <input type="datetime-local" class="form-input" id="plannedEndDate" name="plannedEndDate">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-clipboard-list"></i> Implementation Plan</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Justification</label>
+                        <textarea class="form-textarea" id="justification" name="justification" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Implementation Plan</label>
+                        <textarea class="form-textarea" id="implementationPlan" name="implementationPlan" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rollback Plan</label>
+                        <textarea class="form-textarea" id="rollbackPlan" name="rollbackPlan" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Change
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('change-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitChange();
+});
+
+async function submitChange() {
+    const formData = {
+        shortDescription: document.getElementById('shortDescription').value,
+        description: document.getElementById('description').value,
+        type: document.getElementById('type').value,
+        riskLevel: document.getElementById('riskLevel').value,
+        justification: document.getElementById('justification').value,
+        implementationPlan: document.getElementById('implementationPlan').value,
+        rollbackPlan: document.getElementById('rollbackPlan').value,
+        plannedStartDate: document.getElementById('plannedStartDate').value || null,
+        plannedEndDate: document.getElementById('plannedEndDate').value || null
+    };
+
+    try {
+        const response = await fetch('/api/proxy/changes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            window.location.href = '/changes/' + data.data.id;
+        } else {
+            alert(data.error || 'Failed to create change');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to create change');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,14 @@
+# LinkedEye-FinSpot Frontend Dependencies
+# Python + Flask based frontend
+
+Flask==3.0.0
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+Flask-Session==0.5.0
+python-dotenv==1.0.0
+requests==2.31.0
+Jinja2==3.1.2
+Werkzeug==3.0.1
+python-socketio==5.10.0
+redis==5.0.1
+gunicorn==21.2.0

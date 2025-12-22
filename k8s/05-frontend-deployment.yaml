@@ -1,0 +1,123 @@
+# LinkedEye-FinSpot Frontend Deployment
+# Enterprise ITSM & Incident Management Platform
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkedeye-frontend
+  namespace: linkedeye-finspot
+  labels:
+    app: linkedeye-frontend
+    component: web
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: linkedeye-frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: linkedeye-frontend
+        component: web
+        tier: frontend
+    spec:
+      serviceAccountName: default
+      imagePullSecrets:
+      - name: gitlab-registry-secret
+      containers:
+        - name: frontend
+          image: registry.gitlab.com/finspot-le-dev/fs-le-dev-finspot-incident-tool/frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: BACKEND_API_URL
+              value: "http://linkedeye-backend-service.linkedeye-finspot.svc.cluster.local:5000"
+            - name: FLASK_ENV
+              value: "production"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: linkedeye-secrets
+                  key: JWT_SECRET
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: linkedeye-frontend
+                topologyKey: kubernetes.io/hostname
+
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: linkedeye-frontend-service
+  namespace: linkedeye-finspot
+  labels:
+    app: linkedeye-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: linkedeye-frontend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+
+---
+# Frontend HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: linkedeye-frontend-hpa
+  namespace: linkedeye-finspot
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: linkedeye-frontend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

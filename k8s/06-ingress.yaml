@@ -1,0 +1,121 @@
+# LinkedEye-FinSpot Ingress Configuration
+# Enterprise ITSM & Incident Management Platform
+# Frontend: fs-le-dev-inc.finspot.in
+# Backend API: fs-le-dev-inc.api.finspot.in
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linkedeye-ingress
+  namespace: linkedeye-finspot
+  labels:
+    app: linkedeye-finspot
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    # Session affinity for frontend (required for filesystem sessions)
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/session-cookie-name: "SERVERID"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "86400"
+    nginx.ingress.kubernetes.io/session-cookie-change-on-failure: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "*.finspot.in"
+        - fs-le-dev-inc.finspot.in
+        - fs-le-dev-inc.api.finspot.in
+      secretName: finspot-wildcard-tls
+  rules:
+    # Frontend Ingress Rule
+    - host: fs-le-dev-inc.finspot.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: linkedeye-frontend-service
+                port:
+                  number: 8000
+
+    # Backend API Ingress Rule
+    - host: fs-le-dev-inc.api.finspot.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: linkedeye-backend-service
+                port:
+                  number: 5000
+
+---
+# Backend API specific Ingress with CORS and WebSocket support
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linkedeye-api-ingress
+  namespace: linkedeye-finspot
+  labels:
+    app: linkedeye-finspot
+    component: api
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$binary_remote_addr"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+    # CORS Configuration
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://fs-le-dev-inc.finspot.in"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Accept, Origin, X-Requested-With"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "*.finspot.in"
+        - fs-le-dev-inc.api.finspot.in
+      secretName: finspot-wildcard-tls
+  rules:
+    - host: fs-le-dev-inc.api.finspot.in
+      http:
+        paths:
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: linkedeye-backend-service
+                port:
+                  number: 5000
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: linkedeye-backend-service
+                port:
+                  number: 5000
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: linkedeye-backend-service
+                port:
+                  number: 5000
